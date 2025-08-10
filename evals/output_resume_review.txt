@@ -1,0 +1,70 @@
+{
+  "fit": {
+    "score": 7,
+    "rationale": "The candidate has extensive C-suite and growth-stage leadership experience, including scaling teams, driving strategy, and leading major transformations in tech-enabled companies. Strong track record in P&L ownership, M&A integration, organizational development, and product strategy aligns with many CEO requirements. However, there is a notable gap in direct experience with autonomous navigation, robotics, or deep AI technical leadership. While the candidate has AI/ML-related product initiatives, they lack clear early-stage startup CEO experience in a highly technical domain, as well as direct fundraising and IPO preparation. Fit is above average but not perfect given the technical and stage-specific preferences."
+  },
+  "gap map": [
+    {
+      "JD Requirement/Keyword": "Early-stage company leadership",
+      "Present in Resume?": "Partial",
+      "Where/Evidence": "33Across (Series B), Jaxtr (Series A), Upwork (Series A)",
+      "Gap handling": "Add — emphasize early-stage leadership, team build-outs, pivots in bullets."
+    },
+    {
+      "JD Requirement/Keyword": "Autonomous navigation / robotics",
+      "Present in Resume?": "No",
+      "Where/Evidence": "None directly; only tangential AI/ML personalization at Move Inc.",
+      "Gap handling": "Omit — do not fabricate; instead emphasize transferable AI/ML and tech platform leadership."
+    },
+    {
+      "JD Requirement/Keyword": "AI / Artificial Intelligence",
+      "Present in Resume?": "Partial",
+      "Where/Evidence": "Move Inc. (AI/ML personalization), Silver Lake (instituted AI workflows)",
+      "Gap handling": "Rephrase — bring AI/ML leadership higher in bullets and intro sentences."
+    },
+    {
+      "JD Requirement/Keyword": "Capital raising / investor relations",
+      "Present in Resume?": "No direct mention",
+      "Where/Evidence": "M&A integration, large acquisitions, portfolio company oversight",
+      "Gap handling": "Add — if true, reference involvement in fundraising or investor relations; else focus on acquisition/board work."
+    },
+    {
+      "JD Requirement/Keyword": "Team building from scratch",
+      "Present in Resume?": "Yes",
+      "Where/Evidence": "Silver Lake (recruiting C-level execs), various org rebuilds",
+      "Gap handling": "Rephrase — explicitly call out 'built teams from zero' where applicable."
+    },
+    {
+      "JD Requirement/Keyword": "IPO preparation",
+      "Present in Resume?": "No",
+      "Where/Evidence": "None",
+      "Gap handling": "Omit — avoid unless factual."
+    },
+    {
+      "JD Requirement/Keyword": "P&L ownership",
+      "Present in Resume?": "Yes",
+      "Where/Evidence": "Move Inc. ($30M+ SaaS BU), YP ($975M revenue)",
+      "Gap handling": "Rephrase — emphasize full company/BUs P&L in top bullets."
+    },
+    {
+      "JD Requirement/Keyword": "Building company culture",
+      "Present in Resume?": "Yes",
+      "Where/Evidence": "Multiple org rebuilds, employee engagement metrics",
+      "Gap handling": "Rephrase — highlight 'company culture' and 'innovation culture'."
+    },
+    {
+      "JD Requirement/Keyword": "Technical product direction",
+      "Present in Resume?": "Yes",
+      "Where/Evidence": "Multiple CPO roles; AI/ML features",
+      "Gap handling": "Add — emphasize collaboration with engineering leadership."
+    }
+  ],
+  "questions": [
+    "Have you directly participated in raising venture capital or securing strategic investment for a company or portfolio company? If so, what amounts and from whom?",
+    "Have you ever led or materially contributed to IPO readiness or SEC listing preparation?",
+    "In your early-stage roles (Jaxtr, Upwork, 33Across), did you hire the founding engineering or technical teams from scratch?",
+    "Can you quantify the size (headcount, $ budget) of the largest engineering/technical organization you’ve overseen directly?",
+    "Can you expand on any direct work with robotics, autonomous navigation, or computer vision products?"
+  ],
+  "tailored resume": "## PROFESSIONAL EXPERIENCE \nSILVER LAKE        Apr 2020 - Oct 2024, Menlo Park, CA\nPrivate equity firm investing in technology and technology-enabled companies. <span style=\"color:#c00000\"><del>Responsible for improving operating effectiveness and efficiencies of portfolio companies.</del></span> <span style=\"color:#c00000\">Focused on scaling portfolio companies by driving strategy, building high-performing teams, and instituting AI-enabled operational efficiencies.</span>\n\nOperating Executive \n<span style=\"color:#c00000\"><del>Strategy, Transformation, Organization Development, Executive Coaching & Recruiting.</del></span> <span style=\"color:#c00000\">Strategy, transformation, culture building, executive recruiting, and AI/ML adoption.</span>\n* Evaluated, recruited, onboarded and coached <span style=\"color:#c00000\"><del>10+</del></span> <span style=\"color:#c00000\">over 10</span> C-level executives <span style=\"color:#c00000\">to build out leadership teams from the ground up</span>\n* Partnered with CPOs and CTOs to develop strategy, revise operating practices, institute <span style=\"color:#c00000\"><del>AI workflows</del></span> <span style=\"color:#c00000\">AI/ML-driven workflows</span>, and reset organizations leading to <span style=\"color:#c00000\">productivity and velocity gains exceeding 30%</span> and revenue/growth lifts of 10%+\n* Identified 20%+ EBITDA improvements, realizing >60% within 12 months through census-level workforce changes and <span style=\"color:#c00000\">AI-enabled process redesigns</span>\n* Co-developed post-merger integration (PMI) plans with management teams, leading to <span style=\"color:#c00000\">realization of targeted gains 4 quarters ahead of schedule and 30% above plan</span>\n\nMOVE INC / REALTOR.COM        Apr 2017 - Mar 2020, Santa Clara, CA\nDigital real estate search for consumers and SaaS platform for real estate agents. Direct report to CEO. Led 140 person team spanning product, UX, editorial, sales and operations. \n\nChief Product Officer and General Manager\n<span style=\"color:#c00000\"><del>Strategy pivot, consumer experience, organization development, general management</del></span> <span style=\"color:#c00000\">Strategy pivot, AI/ML personalization, consumer experience, culture transformation</span>\n* Created vision and company-wide support for a transformation into a consumer-centric experience, leading to a pivot in business model and largest acquisition \n* Crafted re-imagined consumer experience, driven by design and <span style=\"color:#c00000\">AI/ML-powered personalization</span> and workflows to achieve 75M monthly unique users (+10% CAGR) and record user satisfaction (78/100)\n* Delivered new monetization products and more leads to fuel 15% CAGR revenue growth \n* Oversaw full P&L, Sales, and Operations across $30M+ SaaS BU, consistently beating EBITDA targets\n* Rebuilt product organization and operating model, leading to a 25% increase in employee engagement and a 4-year low in voluntary turnover\n\nFINANCIAL ENGINES (FNGN)         Apr 2014 - Mar 2017, Sunnyvale, CA\nAutomated asset management and retirement advisory. Direct report to CEO and Section 16 officer. Led 90 person team spanning product, UX, analytics and marketing. \n\nEVP, Product Management and Consumer Marketing \n* Oversaw asset management platform, which grew revenues 24% CAGR from 2014 to $400M in 2016 \n* Led vision and transformation from a B2B to a B2B2C model, reinvigorating a stagnant product to 120% increase in usage and 20% decrease in cancellations \n* Implemented freemium and omnichannel campaigns across digital, print and call center, reversing a declining trend with a 33% increase in conversion\n* Accelerated execution 3X by establishing Agile development and <span style=\"color:#c00000\">reimagining</span> Go-To-Market \n* Drove organizational change and talent management, leading to employee engagement increasing by 40% and creation of ML/Data Science organization\n\n33ACROSS        Apr 2012 - Mar 2014, Sunnyvale, CA\nPublisher network and big data adtech startup. Joined at Series B. Direct report to CEO. Led 3 product managers. \n\nChief Product Officer \n* Led tiger team to conceive and get product-market fit for new product lines that became foundation for company relaunch \n* Improved publisher products, reducing churn by 75% and expanding base 60% to 1M+ sites; won industry award for best technology innovation\n* Created new ad impressions that out-performed competitors 4X-10X and became 50%+ of company run-rate revenue after 18 months in market\n\nYP INC (formerly AT&T Interactive)        Jan 2009 - Mar 2012,  San Francisco, CA\nPublisher network and ad products for local businesses. Member of executive team. Led 60 person team responsible for product, business management and UX. Spun out in 2012. \n\nVice President, Product - Advertising Products and Publisher Network\n* Oversaw advertising products, which grew revenue 20% CAGR from 2008 to $975M in 2011, with 3 out of 4 product lines exceeding targets \n* Overhauled existing ad products and expanded into small business CRM, with new products contributing 50%+ of revenue growth in 2009-2011 \n* Developed mobile ad network with AT&T targeting data, achieving 2X better eCPMs than competitors \n* Lifted sales force productivity with 45%+ increase in qualified leads, mobile-first positioning, and enhanced pre-sales tools \n\nEarlier career roles:\n<span style=\"color:#c00000\"><del>JAXTR, VP Product (Series A)        May 2007 - Dec 2009, Menlo Park, CA</del></span>\n<span style=\"color:#c00000\">JAXTR, VP Product (Series A)        May 2007 - Dec 2009, Menlo Park, CA — Scaled user base to 10M, built monetization streams (ads + transactions), and reduced acquisition cost by 80%.</span>\n<span style=\"color:#c00000\"><del>EBAY INC, Group Product Manager        May 2004 - Apr 2007, San Jose, CA</del></span>\n<span style=\"color:#c00000\">EBAY INC, Group Product Manager        May 2004 - Apr 2007, San Jose, CA — Launched eBay Express to $180M run-rate, delivering 40% conversion lift.</span>\n<span style=\"color:#c00000\"><del>UPWORK, Director Category Management (Series A)        Aug 2004 - May 2007 Sunnyvale, CA</del></span>\n<span style=\"color:#c00000\">UPWORK, Director Marketing & Category Mgmt (Series A) Aug 2004 - May 2007, Sunnyvale, CA — Delivered 15% annual revenue growth and closed $3M enterprise sale.</span>\nBOSTON CONSULTING GROUP, Associate        Feb 1996 - Jun 1998 Kuala Lumpur, Malaysia\n\n## EDUCATION\nM.I.T. SLOAN SCHOOL OF MANAGEMENT        Aug 1998 - Jun 2000 Cambridge, MA\nMaster of Business Administration\n\nUNIVERSITY OF AUCKLAND        Feb 1992 - Dec 1995 New Zealand\nBachelor of Science (Statistics), Bachelor of Commerce (Economics)\n"
+}
