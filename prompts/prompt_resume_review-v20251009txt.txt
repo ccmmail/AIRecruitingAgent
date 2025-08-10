@@ -38,8 +38,7 @@ Style guidelines for bullets:
 4. Remove filler words (e.g, "responsible for", "helped with") and low-signal items.
 
 Output format:
-Return sections in the same order as Deliverables 1–4, clearly titled. The tailored resume must be a single contiguous block using the chosen markup style.
-
+Return sections in the same order as Deliverables 1–4 in JSON format, i.e., with the following sections of "fit", "gap map", "questions", and "tailored resume". The "tailored resume" section must be a single contiguous block using the chosen markup style.
 
 
 [BEGIN RESUME]
