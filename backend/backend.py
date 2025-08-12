@@ -1,6 +1,4 @@
 """Backend API for generating tailored resumes using OpenAI."""
-# TO-DO: Add Langsmith tracking
-# TO-DO: write tests for the API endpoints
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -53,9 +51,13 @@ def prompt_LLM(prompt: str) -> str:
 
 @traceable(name="create_resume_review_prompt")
 def create_review_prompt(job_description: str) -> str:
-    """Read the prompt template and replace placeholders to create final LLM prompt."""
+    """Replace placeholders in prompt template to create final prompt."""
+    # read template
     with open(PROMPT_RESUME_REVIEW_FILE, "r") as file:
         prompt = file.read()
+
+    # replace placeholders with actual data
+    prompt = prompt.replace("{{JOB_DESCRIPTION}}", job_description)
 
     with open(RESUME_FILE, "r") as file:
         resume = file.read()
@@ -64,8 +66,6 @@ def create_review_prompt(job_description: str) -> str:
     with open(ADDITIONAL_EXPERIENCE_FILE, "r") as file:
         additional_experience = file.read()
     prompt = prompt.replace("{{ADDITIONAL_EXPERIENCE}}", additional_experience)
-
-    prompt = prompt.replace("{{JOB_DESCRIPTION}}", job_description)
 
     return prompt
 
