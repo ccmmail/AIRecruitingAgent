@@ -5,21 +5,31 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from openai import OpenAI
-import os
 from pathlib import Path
+import os
 from dotenv import load_dotenv
-load_dotenv()
+from langsmith import traceable, Client
+import json
 
+# Load environment variables from .env file
+load_dotenv()
 
 # Define the base directory and paths for prompts and data files
 BASE_DIR = Path(__file__).resolve().parent.parent
-PROMPT_RESUME_REVIEW_DIR = BASE_DIR / "prompts" / "prompt_resume_review_GOLD.txt"
-RESUME_DIR = BASE_DIR / "data" / "resume.txt"
-ADDITIONAL_EXPERIENCE_DIR = BASE_DIR / "data" / "additional_experience.txt"
+PROMPT_RESUME_REVIEW_FILE = BASE_DIR / "prompts" / "prompt_resume_review_GOLD.txt"
+RESUME_FILE = BASE_DIR / "data" / "resume.txt"
+ADDITIONAL_EXPERIENCE_FILE = BASE_DIR / "data" / "additional_experience.txt"
+JOB_DESCRIPTION_FILE = BASE_DIR / "data" / "job_description.txt"
+OUTPUT_FILE = BASE_DIR / "output" / "output.txt"
+OUTPUT_RESUME_FILE = BASE_DIR / "output" / "resume.md"
 
-# Set up the FastAPI application and OpenAI client
+
+# Initialize the FastAPI application, OpenAI client, and LangSmith tracer
 app = FastAPI(debug=True)
 LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+os.environ["LANGSMITH_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
+langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
 
 
 @app.get("/")
@@ -28,29 +38,34 @@ def show_heartbeat():
     return {"message": "Hello World"}
 
 
+@traceable(name="prompt_LLM")
 def prompt_LLM(prompt: str) -> str:
-    """Call the OpenAI API to get a response."""
+    """Call OpenAI API to get a response."""
     response = LLM.chat.completions.create(
         model="gpt-5-mini",
-        temperature=0,
-        messages=[{"role": "user", "content": prompt}]
+        temperature=1,
+        messages=[{"role": "user",
+                   "content": prompt}
+                  ]
     )
     return response.choices[0].message.content.strip()
 
 
-def create_resume_review_prompt(job_description: str) -> str:
-    """Create an LLM prompt to generate a tailored resume."""
-    with open(PROMPT_RESUME_REVIEW_DIR, "r") as file:
+@traceable(name="create_resume_review_prompt")
+def create_review_prompt(job_description: str) -> str:
+    """Read the prompt template and replace placeholders to create final LLM prompt."""
+    with open(PROMPT_RESUME_REVIEW_FILE, "r") as file:
         prompt = file.read()
-    prompt = prompt.replace("{{JOB_DESCRIPTION}}", job_description)
 
-    with open(RESUME_DIR, "r") as file:
+    with open(RESUME_FILE, "r") as file:
         resume = file.read()
     prompt = prompt.replace("{{RESUME}}", resume)
 
-    with open(ADDITIONAL_EXPERIENCE_DIR, "r") as file:
+    with open(ADDITIONAL_EXPERIENCE_FILE, "r") as file:
         additional_experience = file.read()
     prompt = prompt.replace("{{ADDITIONAL_EXPERIENCE}}", additional_experience)
+
+    prompt = prompt.replace("{{JOB_DESCRIPTION}}", job_description)
 
     return prompt
 
@@ -58,13 +73,24 @@ def create_resume_review_prompt(job_description: str) -> str:
 class JobListing(BaseModel):
     """Define the shape of data expected by /generate/resume."""
     job_description: str
+    save_output: bool = True
 
 
-@app.post("/generate/resume")
-def generate_resume(job: JobListing):
-    """Generate a tailored resume based on the job listing."""
-    prompt = create_resume_review_prompt(job.job_description)
-    return {"prompt": prompt}
-    # response = prompt_LLM(prompt)
-    # return {"message": f"{response}"}
+@app.post("/generate/review")
+@traceable(name="generate_review_endpoint")
+def generate_review(job_listing: JobListing):
+    """Generate a review and tailored resume based on the job listing."""
+    prompt = create_review_prompt(job_listing.job_description)
+    response_json = prompt_LLM(prompt)
 
+    if job_listing.save_output:
+        # Save the response to a file
+        with open(OUTPUT_FILE, "w") as file:
+            file.write(response_json)
+        # Save the resume markdown to a file
+        response_dict = json.loads(response_json)
+        resume = response_dict.get("Tailored_Resume")
+        with open(OUTPUT_RESUME_FILE, "w") as file:
+            file.write(resume)
+
+    return response_json

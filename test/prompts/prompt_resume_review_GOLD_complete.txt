@@ -6,18 +6,18 @@ Input provided below:
 - "additional experience" documenting the candidate's additional experiences that are left out of the current version of the resume
 
 Deliverables (in order):
-1. Fit Assessment (1–10): 
-- Provide a score where 5 = average plausible candidate, 10 = perfect fit. 
-- Provide a brief rationale, including must-have matches, gaps, seniority/industry alignment. 
-- Be critical and realistic in your assessment. 
-2. Keyword & Gap Map (table):
-- Columns: JD Requirement/Keyword | Present in Resume? (Y/N) | Where/Evidence | Gap handling (add/rephrase/omit).
-3. Questions for the Candidate (max 5):
-- Focus on missing metrics, specific tools/tech, scope (team size, budget, ARR), and outcomes that would strengthen alignment. Phrase as yes/no or short-answer prompts.
-4. Tailored Resume (markup version):
-- Provide a single document showing **all edits inline as redlines**, ensuring a complete diff with the original resume. 
+1. "Fit"
+- Provide a score where 5 = average plausible candidate, 10 = perfect fit.
+- Provide a brief rationale, including must-have matches, gaps, seniority/industry alignment.
+- Be critical and realistic in your assessment.
+2. "Gap_Map" (table):
+- Columns: JD Requirement/Keyword | Present in Resume? (Y/N/Partial) | Where/Evidence | Gap handling (add/rephrase/omit).
+3. "Questions" for the Candidate (max 5):
+- Focus on missing metrics, specific tools/tech, scope (e.g., team size, budget, ARR), and outcomes that would strengthen alignment. Phrase as yes/no or short-answer prompts.
+4. "Tailored_Resume" (markup version):
+- Provide a single document showing **all edits inline as redlines**, ensuring a complete diff with the original resume.
 - For **every change** (even small rephrasings, reordered words, or bullet point restructuring), use HTML-in-Markdown tags:
-  -- Additions: <span style="color:#c00000">…new text…</span>
+  -- Additions: <span style="color:#008000">…new text…</span>
   -- Deletions: <span style="color:#c00000"><del>…removed text…</del></span>
 - Do not silently edit text — if a word is changed, show the old word as a deletion and the new one as an addition.
 - If you move or re-order bullets, show the deletion in the old place and the addition in the new place.
@@ -38,8 +38,31 @@ Style guidelines for bullets:
 4. Remove filler words (e.g, "responsible for", "helped with") and low-signal items.
 
 Output format:
-Return sections in the same order as Deliverables 1–4 in JSON format, i.e., with the following sections of "fit", "gap map", "questions", and "tailored resume". The "tailored resume" section must be a single contiguous block using the chosen markup style.
+Your entire output must be exactly one valid JSON object, with no prose, explanation, or Markdown code fences. The JSON must exactly follow this schema:
 
+{
+  "Fit": {
+    "score": <integer from 1 to 10>,
+    "rationale": "<string>"
+  },
+  "Gap_Map": [
+    {
+      "JD Requirement/Keyword": "<string>",
+      "Present in Resume?": "<Y/N/Partial>",
+      "Where/Evidence": "<string>",
+      "Gap handling": "<string>"
+    }
+  ],
+  "Questions": [
+    "<string>",
+    "<string>"
+  ],
+  "Tailored_Resume": "<string containing the full redline-markup resume as a single contiguous block, preserving all <span> and <del> tags exactly and keeping line breaks as in the original>"
+}
+
+* Use the property names exactly as shown above, including capitalization.
+* Escape any quotation marks inside string values to maintain valid JSON.
+* Do not include triple backticks, comments, or any formatting outside the JSON object.
 
 [BEGIN RESUME]
 
@@ -147,6 +170,30 @@ Associate
 
 [BEGIN JOB DESCRIPTION]
 
-{{JOB_DESCRIPTION}}
+Chief Executive Officer (CEO)
+Location: San Jose, CA
+Industry: Autonomous Navigation & Artificial Intelligence
+
+About the Company:
+A stealth-mode company in the autonomous navigation and AI space, based in San Jose, is building next-generation systems for intelligent mobility and robotics. Backed by deep technical innovation, the company is poised to scale its engineering team and pursue long-term growth milestones, including product development and IPO preparation.
+
+Position Summary:
+We are seeking a visionary and hands-on Chief Executive Officer to lead this early-stage venture through its foundational build-out and toward long-term success. The CEO will be responsible for driving strategy, building out a world-class engineering team, and aligning the organization for scale, partnerships, and future investment.
+
+Key Responsibilities:
+Lead all aspects of company growth—from early product strategy to investor relations and potential exit planning.
+Hire and build the initial team, starting with a Navigation Software Engineer, followed by roles in SLAM, perception, and embedded systems.
+Oversee day-to-day operations, company vision, and cross-functional collaboration across technical and business domains.
+Guide technical and product direction in collaboration with engineering leadership.
+Build a strong company culture focused on innovation, accountability, and speed.
+Represent the company externally with partners, stakeholders, and prospective investors.
+
+Ideal Candidate Profile:
+10+ years of progressive leadership experience, ideally including startup or growth-stage company leadership.
+Background in technology, AI, robotics, or autonomous systems strongly preferred.
+Bachelor’s or Master’s degree in Engineering, Computer Science, or Business; MBA or equivalent management background preferred.
+Demonstrated experience in team-building, capital raising, and scaling operations.
+Strong communicator with an energetic, entrepreneurial leadership style.
+Comfortable navigating ambiguity, making fast decisions, and working closely with technical teams.
 
 [END JOB DESCRIPTION]
