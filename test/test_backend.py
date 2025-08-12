@@ -48,7 +48,7 @@ def test_generate_review(HTTP_client, monkeypatch):
             return True
 
     BASE_DIR = Path(__file__).resolve().parent
-    JOB_DESCRIPTION_FILE = BASE_DIR / "data" / "job_description.txt"
+    JOB_DESCRIPTION_FILE = BASE_DIR / "data" / "test_job_description.txt"
     TEST_OUTPUT_FILE = BASE_DIR / "test_output.txt"
     OUTPUT_FILE = BASE_DIR.resolve().parent / "output" / "output.txt"
     OUTPUT_RESUME_FILE = BASE_DIR.resolve().parent / "output" / "resume.md"
