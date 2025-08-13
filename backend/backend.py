@@ -73,6 +73,7 @@ def create_review_prompt(job_description: str) -> str:
 class JobListing(BaseModel):
     """Define the shape of data expected by /generate/resume."""
     job_description: str
+    URL: str
     save_output: bool = True
 
 
