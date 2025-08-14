@@ -1,5 +1,6 @@
 // Background script for the extension
-// Declare the chrome variable
+// chrome variable is already globally available in Chrome extensions
+
 const chrome = window.chrome
 
 chrome.runtime.onInstalled.addListener(() => {
