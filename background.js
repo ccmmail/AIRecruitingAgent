@@ -1,6 +1,6 @@
 // Background script for the extension
-
-const chrome = require("chrome") // Declare the chrome variable
+// Declare the chrome variable
+const chrome = window.chrome
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log("AI Recruiting Agent extension installed")
