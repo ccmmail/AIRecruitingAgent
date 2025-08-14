@@ -65,7 +65,7 @@ async function buildExtension() {
     // Copy Next.js build output
     if (await fs.pathExists(nextBuildDir)) {
       console.log("📦 Copying Next.js build files...")
-      await fs.copy(path.join(nextBuildDir, "static"), path.join(buildDir, "_next", "static"))
+      await fs.copy(path.join(nextBuildDir, "static"), path.join(buildDir, "next-static", "static"))
 
       // Copy the main app page
       const appPagePath = path.join(projectRoot, "app", "page.tsx")
