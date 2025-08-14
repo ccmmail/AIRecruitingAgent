@@ -1,6 +1,7 @@
 """Backend API for generating tailored resumes using OpenAI."""
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
 from pathlib import Path
@@ -24,6 +25,13 @@ OUTPUT_RESUME_FILE = BASE_DIR / "output" / "resume.md"
 
 # Initialize the FastAPI application, OpenAI client, and LangSmith tracer
 app = FastAPI(debug=True)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, restrict to specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
