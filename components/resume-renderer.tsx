@@ -1,16 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, X, Edit3 } from "lucide-react"
-import { Input } from "@/components/ui/input"
 
 interface ResumeRendererProps {
   markdown: string
   showRedlines: boolean
-  onAcceptChange?: (changeId: string) => void
-  onRejectChange?: (changeId: string) => void
-  onEditChange?: (changeId: string, newText: string) => void
+  onAcceptChange?: (changeId: string, originalMarkup: string) => void
+  onRejectChange?: (changeId: string, originalMarkup: string) => void
+  onEditChange?: (changeId: string, originalMarkup: string, newText: string) => void
 }
 
 export function ResumeRenderer({
@@ -24,201 +23,248 @@ export function ResumeRenderer({
   const [editText, setEditText] = useState("")
   const [hoveredId, setHoveredId] = useState<string | null>(null)
 
-  // Parse and render the markdown with inline controls
-  const renderContent = () => {
+  // Process markdown and extract changes using useMemo to avoid re-processing on every render
+  const { processedMarkdown, changeMarkup } = useMemo(() => {
     if (!showRedlines) {
-      // Clean version - remove all redline markup
-      return markdown
+      // Clean version - properly remove all markup tags
+      const cleanMarkdown = markdown
         .replace(/<span style="color:#c00000"><del>.*?<\/del><\/span>/g, "")
+        .replace(/<span style="color:#008000"><add>(.*?)<\/add><\/span>/g, "$1")
         .replace(/<span style="color:#008000">(.*?)<\/span>/g, "$1")
-        .replace(/~~.*?~~/g, "")
+        .replace(/~~(.*?)~~/g, "")
+        .replace(/<add>(.*?)<\/add>/g, "$1") // Remove any remaining <add> tags
+        .replace(/<del>.*?<\/del>/g, "") // Remove any remaining <del> tags
+
+      return { processedMarkdown: cleanMarkdown, changeMarkup: new Map<string, string>() }
     }
 
-    // Split content by lines to preserve formatting
-    const lines = markdown.split("\n")
+    // Process the entire markdown as one string to preserve line structure
+    let processed = markdown
+    let changeId = 0
+    const newChangeMarkup = new Map<string, string>()
+
+    // Find deletions with content: <span style="color:#c00000"><del>text</del></span>
+    const deletionRegex = /<span style="color:#c00000"><del>(.*?)<\/del><\/span>/g
+    processed = processed.replace(deletionRegex, (fullMatch, deletedText) => {
+      if (deletedText.trim()) {
+        const id = `del-${changeId++}`
+        newChangeMarkup.set(id, fullMatch)
+        return `<DELETION id="${id}" text="${deletedText.replace(/"/g, "&quot;")}" />`
+      }
+      return "" // Remove empty deletions
+    })
+
+    // Find additions with <add> tags: <span style="color:#008000"><add>text</add></span>
+    const additionWithTagRegex = /<span style="color:#008000"><add>(.*?)<\/add><\/span>/g
+    processed = processed.replace(additionWithTagRegex, (fullMatch, addedText) => {
+      const id = `add-${changeId++}`
+      newChangeMarkup.set(id, fullMatch)
+      return `<ADDITION id="${id}" text="${addedText.replace(/"/g, "&quot;")}" />`
+    })
+
+    // Find regular additions: <span style="color:#008000">text</span> (not preceded by </del></span>)
+    const regularAdditionRegex = /(?<!<\/del><\/span>)<span style="color:#008000">(.*?)<\/span>/g
+    processed = processed.replace(regularAdditionRegex, (fullMatch, addedText) => {
+      const id = `add-${changeId++}`
+      newChangeMarkup.set(id, fullMatch)
+      return `<ADDITION id="${id}" text="${addedText.replace(/"/g, "&quot;")}" />`
+    })
+
+    return { processedMarkdown: processed, changeMarkup: newChangeMarkup }
+  }, [markdown, showRedlines])
+
+  const renderFormattedText = (text: string, withRedlines = false) => {
+    // Split by lines to handle headers and formatting
+    const lines = text.split("\n")
 
     return lines.map((line, lineIndex) => {
       if (!line.trim()) {
         return <br key={lineIndex} />
       }
 
-      // Process deletions and additions in the line
-      const parts = []
-      const currentIndex = 0
-      let changeId = 0
-
-      // Find deletions: <span style="color:#c00000"><del>text</del></span>
-      const deletionRegex = /<span style="color:#c00000"><del>(.*?)<\/del><\/span>/g
-      let match
-
-      const processedLine = line.replace(deletionRegex, (fullMatch, deletedText) => {
-        const id = `del-${lineIndex}-${changeId++}`
-        return `<DELETION id="${id}" text="${deletedText.replace(/"/g, "&quot;")}" />`
-      })
-
-      // Find additions: <span style="color:#008000">text</span>
-      const additionRegex = /<span style="color:#008000">(.*?)<\/span>/g
-      const finalLine = processedLine.replace(additionRegex, (fullMatch, addedText) => {
-        const id = `add-${lineIndex}-${changeId++}`
-        return `<ADDITION id="${id}" text="${addedText.replace(/"/g, "&quot;")}" />`
-      })
-
-      // Parse the processed line and render components
-      const segments = finalLine.split(/(<(?:DELETION|ADDITION)[^>]*\/>)/)
+      // Check if this is a header line
+      if (line.startsWith("## ")) {
+        const headerText = line.slice(3)
+        return (
+          <h2 key={lineIndex} className="text-xl font-bold mt-6 mb-3 text-blue-900">
+            {withRedlines ? renderInlineElements(headerText) : headerText}
+          </h2>
+        )
+      }
+      if (line.startsWith("# ")) {
+        const headerText = line.slice(2)
+        return (
+          <h1 key={lineIndex} className="text-2xl font-bold text-center mb-4">
+            {withRedlines ? renderInlineElements(headerText) : headerText}
+          </h1>
+        )
+      }
 
       return (
         <div key={lineIndex} className="leading-relaxed">
-          {segments.map((segment, segIndex) => {
-            if (segment.startsWith("<DELETION")) {
-              const idMatch = segment.match(/id="([^"]*)"/)
-              const textMatch = segment.match(/text="([^"]*)"/)
-              if (idMatch && textMatch) {
-                const id = idMatch[1]
-                const text = textMatch[1].replace(/&quot;/g, '"')
-                return (
-                  <span
-                    key={segIndex}
-                    className="relative inline-block"
-                    onMouseEnter={() => setHoveredId(id)}
-                    onMouseLeave={() => setHoveredId(null)}
-                  >
-                    <span className="text-red-600 line-through">{text}</span>
-                    {hoveredId === id && (
-                      <span className="absolute -top-8 left-0 flex gap-1 bg-white border rounded shadow-lg p-1 z-10">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onRejectChange?.(id)}
-                          className="h-6 w-6 p-0"
-                          title="Remove this deletion"
-                        >
-                          <X className="w-3 h-3 text-red-600" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditingId(id)
-                            setEditText(text)
-                          }}
-                          className="h-6 w-6 p-0"
-                          title="Edit this text"
-                        >
-                          <Edit3 className="w-3 h-3 text-blue-600" />
-                        </Button>
-                      </span>
-                    )}
-                  </span>
-                )
-              }
-            } else if (segment.startsWith("<ADDITION")) {
-              const idMatch = segment.match(/id="([^"]*)"/)
-              const textMatch = segment.match(/text="([^"]*)"/)
-              if (idMatch && textMatch) {
-                const id = idMatch[1]
-                const text = textMatch[1].replace(/&quot;/g, '"')
-                return (
-                  <span
-                    key={segIndex}
-                    className="relative inline-block"
-                    onMouseEnter={() => setHoveredId(id)}
-                    onMouseLeave={() => setHoveredId(null)}
-                  >
-                    <span className="text-green-600 font-medium">{text}</span>
-                    {hoveredId === id && (
-                      <span className="absolute -top-8 left-0 flex gap-1 bg-white border rounded shadow-lg p-1 z-10">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onAcceptChange?.(id)}
-                          className="h-6 w-6 p-0"
-                          title="Accept this addition"
-                        >
-                          <CheckCircle className="w-3 h-3 text-green-600" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onRejectChange?.(id)}
-                          className="h-6 w-6 p-0"
-                          title="Reject this addition"
-                        >
-                          <X className="w-3 h-3 text-red-600" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditingId(id)
-                            setEditText(text)
-                          }}
-                          className="h-6 w-6 p-0"
-                          title="Edit this text"
-                        >
-                          <Edit3 className="w-3 h-3 text-blue-600" />
-                        </Button>
-                      </span>
-                    )}
-                  </span>
-                )
-              }
-            } else {
-              // Regular text - render with markdown-like formatting
-              let formattedText = segment
-
-              // Handle headers
-              if (formattedText.startsWith("## ")) {
-                return (
-                  <h2 key={segIndex} className="text-xl font-bold mt-6 mb-3 text-blue-900">
-                    {formattedText.slice(3)}
-                  </h2>
-                )
-              }
-              if (formattedText.startsWith("# ")) {
-                return (
-                  <h1 key={segIndex} className="text-2xl font-bold text-center mb-4">
-                    {formattedText.slice(2)}
-                  </h1>
-                )
-              }
-
-              // Handle bold text
-              formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-
-              return <span key={segIndex} dangerouslySetInnerHTML={{ __html: formattedText }} />
-            }
-            return null
-          })}
+          {withRedlines ? renderInlineElements(line) : renderPlainText(line)}
         </div>
       )
     })
   }
 
-  // Handle editing
-  if (editingId) {
-    return (
-      <div className="p-4 bg-blue-50 border rounded">
-        <div className="mb-2">
-          <label className="text-sm font-medium">Edit text:</label>
-        </div>
-        <Input value={editText} onChange={(e) => setEditText(e.target.value)} className="mb-2" autoFocus />
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            onClick={() => {
-              onEditChange?.(editingId, editText)
-              setEditingId(null)
-            }}
-          >
-            Save
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
-            Cancel
-          </Button>
-        </div>
-      </div>
-    )
+  const renderPlainText = (text: string) => {
+    // Handle bold text
+    const formattedText = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    return <span dangerouslySetInnerHTML={{ __html: formattedText }} />
   }
 
-  return <div className="font-serif leading-relaxed">{renderContent()}</div>
+  const renderInlineElements = (text: string) => {
+    // Parse the text and render inline components
+    const segments = text.split(/(<(?:DELETION|ADDITION)[^>]*\/>)/)
+
+    return segments.map((segment, segIndex) => {
+      if (segment.startsWith("<DELETION")) {
+        const idMatch = segment.match(/id="([^"]*)"/)
+        const textMatch = segment.match(/text="([^"]*)"/)
+        if (idMatch && textMatch) {
+          const id = idMatch[1]
+          const text = textMatch[1].replace(/&quot;/g, '"')
+          const originalMarkup = changeMarkup.get(id) || ""
+
+          return (
+            <span
+              key={segIndex}
+              className="relative inline-block"
+              onMouseEnter={() => setHoveredId(id)}
+              onMouseLeave={() => setHoveredId(null)}
+            >
+              <span className="text-red-600 line-through">{text}</span>
+              {hoveredId === id && (
+                <span className="absolute -top-8 left-0 flex gap-1 bg-white border rounded shadow-lg p-1 z-10">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      onAcceptChange?.(id, originalMarkup)
+                      setHoveredId(null)
+                    }}
+                    className="h-6 w-6 p-0"
+                    title="Accept deletion (remove text)"
+                  >
+                    <CheckCircle className="w-3 h-3 text-green-600" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      onRejectChange?.(id, originalMarkup)
+                      setHoveredId(null)
+                    }}
+                    className="h-6 w-6 p-0"
+                    title="Reject deletion (keep text)"
+                  >
+                    <X className="w-3 h-3 text-red-600" />
+                  </Button>
+                </span>
+              )}
+            </span>
+          )
+        }
+      } else if (segment.startsWith("<ADDITION")) {
+        const idMatch = segment.match(/id="([^"]*)"/)
+        const textMatch = segment.match(/text="([^"]*)"/)
+        if (idMatch && textMatch) {
+          const id = idMatch[1]
+          const text = textMatch[1].replace(/&quot;/g, '"')
+          const originalMarkup = changeMarkup.get(id) || ""
+
+          if (editingId === id) {
+            return (
+              <span
+                key={segIndex}
+                className="relative inline-block bg-blue-50 border border-blue-300 rounded px-1"
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  const newText = e.currentTarget.textContent || ""
+                  if (newText !== text) {
+                    onEditChange?.(id, originalMarkup, newText)
+                  }
+                  setEditingId(null)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    const newText = e.currentTarget.textContent || ""
+                    onEditChange?.(id, originalMarkup, newText)
+                    setEditingId(null)
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault()
+                    setEditingId(null)
+                  }
+                }}
+                autoFocus
+              >
+                {text}
+              </span>
+            )
+          }
+
+          return (
+            <span
+              key={segIndex}
+              className="relative inline-block"
+              onMouseEnter={() => setHoveredId(id)}
+              onMouseLeave={() => setHoveredId(null)}
+            >
+              <span className="text-green-600 font-medium">{text}</span>
+              {hoveredId === id && (
+                <span className="absolute -top-8 left-0 flex gap-1 bg-white border rounded shadow-lg p-1 z-10">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      onAcceptChange?.(id, originalMarkup)
+                      setHoveredId(null)
+                    }}
+                    className="h-6 w-6 p-0"
+                    title="Accept addition (keep text)"
+                  >
+                    <CheckCircle className="w-3 h-3 text-green-600" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingId(id)
+                      setHoveredId(null)
+                    }}
+                    className="h-6 w-6 p-0"
+                    title="Edit text"
+                  >
+                    <Edit3 className="w-3 h-3 text-blue-600" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      onRejectChange?.(id, originalMarkup)
+                      setHoveredId(null)
+                    }}
+                    className="h-6 w-6 p-0"
+                    title="Reject addition (remove text)"
+                  >
+                    <X className="w-3 h-3 text-red-600" />
+                  </Button>
+                </span>
+              )}
+            </span>
+          )
+        }
+      } else {
+        // Regular text - render with markdown-like formatting
+        return renderPlainText(segment)
+      }
+      return null
+    })
+  }
+
+  return <div className="font-serif leading-relaxed">{renderFormattedText(processedMarkdown, showRedlines)}</div>
 }
