@@ -17,7 +17,7 @@ Deliverables (in order):
 4. "Tailored_Resume" (markup version):
 - Provide a single document showing **all edits inline as redlines**, ensuring a complete diff with the original resume.
 - For **every change** (even small rephrasings, reordered words, or bullet point restructuring), use HTML-in-Markdown tags:
-  -- Additions: <span style="color:#008000">…new text…</span>
+  -- Additions: <span style="color:#008000"><add>…new text…</add></span>
   -- Deletions: <span style="color:#c00000"><del>…removed text…</del></span>
 - Do not silently edit text — if a word is changed, show the old word as a deletion and the new one as an addition.
 - If you move or re-order bullets, show the deletion in the old place and the addition in the new place.
