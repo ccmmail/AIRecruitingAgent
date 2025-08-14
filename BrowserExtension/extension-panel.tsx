@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   FileText,
   Users,
@@ -20,8 +21,6 @@ import {
   Download,
   Copy,
   ClipboardList,
-  Eye,
-  EyeOff,
   Send,
 } from "lucide-react"
 import { postReviewWithRetry, postQuestions, cleanMarkdown, getCurrentTabUrl } from "@/lib/api"
@@ -57,9 +56,8 @@ export default function Component() {
   const [isDemoMode, setIsDemoMode] = useState(true)
   const [isSubmittingQuestions, setIsSubmittingQuestions] = useState(false)
   const [questionsSubmitted, setQuestionsSubmitted] = useState(false)
-  const [acceptedChanges, setAcceptedChanges] = useState<Set<string>>(new Set())
-  const [rejectedChanges, setRejectedChanges] = useState<Set<string>>(new Set())
-  const [editedChanges, setEditedChanges] = useState<Map<string, string>>(new Map())
+  const [copyFeedback, setCopyFeedback] = useState(false)
+  const [downloadFeedback, setDownloadFeedback] = useState(false)
 
   useEffect(() => {
     getCurrentTabUrl()
@@ -75,6 +73,14 @@ export default function Component() {
       setTailoredMarkdown(DEMO_RESPONSE.Tailored_Resume)
     }
   }, [isDemoMode])
+
+  const getFitScoreStyle = (score: number) => {
+    if (score >= 9) return "bg-green-800 text-white"
+    if (score >= 7) return "bg-green-200 text-green-800"
+    if (score >= 5) return "bg-orange-200 text-orange-800"
+    if (score >= 3) return "bg-red-200 text-red-800"
+    return "bg-red-800 text-white"
+  }
 
   const handleSendToReview = async () => {
     if (!jobDescription.trim()) return
@@ -129,52 +135,93 @@ export default function Component() {
     }
   }
 
-  const handleAcceptChange = (changeId: string) => {
-    setAcceptedChanges((prev) => new Set([...prev, changeId]))
-    setRejectedChanges((prev) => {
-      const newSet = new Set(prev)
-      newSet.delete(changeId)
-      return newSet
-    })
+  const handleAcceptChange = (changeId: string, originalMarkup: string) => {
+    let updatedMarkdown = tailoredMarkdown
+
+    if (changeId.startsWith("del-")) {
+      // Accept deletion = remove the text entirely
+      updatedMarkdown = updatedMarkdown.replace(originalMarkup, "")
+    } else if (changeId.startsWith("add-")) {
+      // Accept addition = keep text, remove markup
+      const textMatch = originalMarkup.match(/<add>(.*?)<\/add>/)
+      if (textMatch) {
+        updatedMarkdown = updatedMarkdown.replace(originalMarkup, textMatch[1])
+      } else {
+        // Handle regular span format
+        const spanMatch = originalMarkup.match(/<span[^>]*>(.*?)<\/span>/)
+        if (spanMatch) {
+          updatedMarkdown = updatedMarkdown.replace(originalMarkup, spanMatch[1])
+        }
+      }
+    }
+
+    setTailoredMarkdown(updatedMarkdown)
   }
 
-  const handleRejectChange = (changeId: string) => {
-    setRejectedChanges((prev) => new Set([...prev, changeId]))
-    setAcceptedChanges((prev) => {
-      const newSet = new Set(prev)
-      newSet.delete(changeId)
-      return newSet
-    })
+  const handleRejectChange = (changeId: string, originalMarkup: string) => {
+    let updatedMarkdown = tailoredMarkdown
+
+    if (changeId.startsWith("del-")) {
+      // Reject deletion = keep text, remove markup
+      const textMatch = originalMarkup.match(/<del>(.*?)<\/del>/)
+      if (textMatch) {
+        updatedMarkdown = updatedMarkdown.replace(originalMarkup, textMatch[1])
+      }
+    } else if (changeId.startsWith("add-")) {
+      // Reject addition = remove text entirely
+      updatedMarkdown = updatedMarkdown.replace(originalMarkup, "")
+    }
+
+    setTailoredMarkdown(updatedMarkdown)
   }
 
-  const handleEditChange = (changeId: string, newText: string) => {
-    setEditedChanges((prev) => new Map([...prev, [changeId, newText]]))
-    setAcceptedChanges((prev) => new Set([...prev, changeId]))
+  const handleEditChange = (changeId: string, originalMarkup: string, newText: string) => {
+    // Replace the original markup with the edited text
+    const updatedMarkdown = tailoredMarkdown.replace(originalMarkup, newText)
+    setTailoredMarkdown(updatedMarkdown)
   }
 
-  const handleCopyCleanMarkdown = async () => {
+  const handleCopyMarkdown = async () => {
     if (!tailoredMarkdown) return
 
     try {
-      await navigator.clipboard.writeText(cleanMarkdown(tailoredMarkdown))
+      const contentToCopy = showRedlines ? tailoredMarkdown : cleanMarkdown(tailoredMarkdown)
+      await navigator.clipboard.writeText(contentToCopy)
+      setCopyFeedback(true)
+      setTimeout(() => setCopyFeedback(false), 2000)
     } catch (err) {
       console.error("Failed to copy:", err)
     }
   }
 
-  const handleDownloadCleanMarkdown = () => {
+  const handleDownloadMarkdown = () => {
     if (!tailoredMarkdown) return
 
-    const cleanContent = cleanMarkdown(tailoredMarkdown)
-    const blob = new Blob([cleanContent], { type: "text/markdown" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "tailored_resume.md"
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    try {
+      const content = showRedlines ? tailoredMarkdown : cleanMarkdown(tailoredMarkdown)
+      const filename = showRedlines ? "resume_redline.md" : "resume.md"
+
+      // Create blob and download
+      const blob = new Blob([content], { type: "text/markdown;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+
+      // Create temporary link and trigger download
+      const link = document.createElement("a")
+      link.href = url
+      link.download = filename
+      link.style.display = "none"
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Clean up the URL and show feedback
+      setTimeout(() => URL.revokeObjectURL(url), 100)
+      setDownloadFeedback(true)
+      setTimeout(() => setDownloadFeedback(false), 2000)
+    } catch (err) {
+      console.error("Failed to download:", err)
+    }
   }
 
   if (!isOpen) return null
@@ -188,7 +235,7 @@ export default function Component() {
             <FileText className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h2 className="font-semibold text-sm">JobBoost Assistant</h2>
+            <h2 className="font-semibold text-sm">AI Recruiting Agent</h2>
             <p className="text-xs text-muted-foreground">AI-Powered Job Application Helper</p>
           </div>
         </div>
@@ -225,16 +272,45 @@ export default function Component() {
         {/* Job Description Tab */}
         <TabsContent value="job-description" className="flex-1 m-0">
           <div className="p-4 space-y-4">
-            <div>
-              <Label htmlFor="job-description">Job Description</Label>
-              <Textarea
-                id="job-description"
-                placeholder="Paste job description here..."
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                className="min-h-[200px] mt-2"
-              />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="job-description" className="text-base font-medium">
+                Job Description
+              </Label>
+              <Button onClick={handleSendToReview} disabled={!jobDescription.trim() || isLoading} size="sm">
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {isDemoMode ? "Loading..." : "Generating..."}
+                  </>
+                ) : isDemoMode ? (
+                  "View Analysis"
+                ) : (
+                  "Submit for Review"
+                )}
+              </Button>
             </div>
+
+            {isDemoMode && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="default" className="text-xs">
+                    Demo
+                  </Badge>
+                  <span className="text-sm font-medium">Example Job Description</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This is a demo with a sample job description and resume. Click "View Analysis" to continue demo or clear the text below to exit demo mode.
+                </p>
+              </div>
+            )}
+
+            <Textarea
+              id="job-description"
+              placeholder="Paste job description here..."
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              className="min-h-[200px]"
+            />
 
             <div>
               <Label htmlFor="url">Page URL</Label>
@@ -255,34 +331,6 @@ export default function Component() {
                 </Button>
               </div>
             )}
-
-            {isDemoMode && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="default" className="text-xs">
-                    Demo Mode
-                  </Badge>
-                  <span className="text-sm font-medium">Example Job Description for CEO</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  This is a demo with sample data. Click "View Demo Analysis" to see the analysis, or clear the text to
-                  exit demo mode.
-                </p>
-              </div>
-            )}
-
-            <Button onClick={handleSendToReview} disabled={!jobDescription.trim() || isLoading} className="w-full">
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {isDemoMode ? "Loading demo..." : "Generating review... this can take up to ~120 seconds"}
-                </>
-              ) : isDemoMode ? (
-                "View Demo Analysis"
-              ) : (
-                "Send to Review"
-              )}
-            </Button>
           </div>
         </TabsContent>
 
@@ -292,15 +340,29 @@ export default function Component() {
             <div className="p-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Badge variant="default" className="text-lg px-3 py-1">
+                  <Badge className={`text-lg px-3 py-1 ${getFitScoreStyle(review.Fit.score)}`}>
                     {review.Fit.score}/10
                   </Badge>
-                  <span className="text-sm font-medium">Fit Score</span>
+                  <span className="font-medium text-2xl">Fit</span>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setActiveTab("resume")} disabled={!tailoredMarkdown}>
+                <Button size="sm" onClick={() => setActiveTab("resume")} disabled={!tailoredMarkdown}>
                   See Resume Recommendations
                 </Button>
               </div>
+
+              {isDemoMode && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="default" className="text-xs">
+                      Demo
+                    </Badge>
+                    <span className="text-sm font-medium">Example resume review     </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Our AI assesses your qualifications against the job's "must-haves" and scores your fit for the job. It also asks you questions in case you &nbsp;have additional qualifications that are not included in your resume.&nbsp;
+                  </p>
+                </div>
+              )}
 
               <ScrollArea className="h-[calc(100vh-250px)]">
                 <div className="space-y-6">
@@ -312,7 +374,7 @@ export default function Component() {
 
                   {/* Gap Map */}
                   <div>
-                    <h3 className="font-semibold mb-3">Gap Analysis</h3>
+                    <h3 className="font-semibold mb-3">Gap Analysis against Job "Must Haves"</h3>
                     <div className="space-y-3">
                       {review.Gap_Map.map((gap, index) => (
                         <Card key={index} className="p-3">
@@ -339,7 +401,10 @@ export default function Component() {
 
                   {/* Questions */}
                   <div>
-                    <h3 className="font-semibold mb-3">Interview Preparation Questions</h3>
+                    <h3 className="font-semibold mb-2">Additional info for AI reviewer</h3>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      (Optional) I can provide an even more tailored resume if you can have additional relevant experiences and skills. Leave blank if there is no additional information I should take into consideration.&nbsp;
+                    </p>
                     <div className="space-y-4">
                       {review.Questions.map((question, index) => (
                         <div key={index} className="space-y-2">
@@ -370,7 +435,7 @@ export default function Component() {
                   onClick={handleSubmitQuestions}
                   disabled={isSubmittingQuestions || questionsSubmitted}
                   className="w-full"
-                  variant={questionsSubmitted ? "outline" : "default"}
+                  variant="secondary"
                 >
                   {isSubmittingQuestions ? (
                     <>
@@ -380,12 +445,12 @@ export default function Component() {
                   ) : questionsSubmitted ? (
                     <>
                       <CheckCircle className="w-4 h-4 mr-2" />
-                      Questions Submitted
+                      Additional Information Submitted
                     </>
                   ) : (
                     <>
                       <Send className="w-4 h-4 mr-2" />
-                      Submit Questions & Answers
+                      Submit additional information
                     </>
                   )}
                 </Button>
@@ -398,34 +463,58 @@ export default function Component() {
         <TabsContent value="resume" className="flex-1 m-0">
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setShowRedlines(!showRedlines)}>
-                  {showRedlines ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
-                  {showRedlines ? "Clean" : "Redline"}
-                </Button>
-                {isDemoMode && (
-                  <Badge variant="secondary" className="text-xs">
-                    Demo Mode
-                  </Badge>
-                )}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="redline-toggle" className="text-sm font-medium">
+                    Redline
+                  </Label>
+                  <Switch id="redline-toggle" checked={showRedlines} onCheckedChange={setShowRedlines} />
+                </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleCopyCleanMarkdown} disabled={!tailoredMarkdown}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyMarkdown}
+                  disabled={!tailoredMarkdown}
+                  className={copyFeedback ? "bg-green-50 border-green-300" : ""}
+                >
                   <Copy className="w-4 h-4 mr-1" />
-                  Copy Clean
+                  {copyFeedback ? "Copied!" : "Copy"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleDownloadCleanMarkdown} disabled={!tailoredMarkdown}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadMarkdown}
+                  disabled={!tailoredMarkdown}
+                  className={downloadFeedback ? "bg-green-50 border-green-300" : ""}
+                >
                   <Download className="w-4 h-4 mr-1" />
-                  Download
+                  {downloadFeedback ? "Downloaded!" : "Download"}
                 </Button>
               </div>
             </div>
+
+            {isDemoMode && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="default" className="text-xs">
+                    Demo
+                  </Badge>
+                  <span className="text-sm font-medium">Example tailored resume</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Our AI suggests a tailored resume for the job. Our suggestions are in redline for you to review. Toggle "Redline" off to see your resume without redline. &nbsp;
+                </p>
+              </div>
+            )}
 
             {showRedlines && (
               <div className="mb-4 p-3 bg-muted rounded-md">
                 <p className="text-sm text-muted-foreground">
                   Hover over <span className="text-red-600 line-through">red strikethrough</span> or{" "}
                   <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit changes.
+                  Click green text to edit inline.
                 </p>
               </div>
             )}
