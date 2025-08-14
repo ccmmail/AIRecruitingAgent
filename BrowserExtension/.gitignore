@@ -9,6 +9,7 @@
 
 # production
 /build
+dist-extension/
 
 # debug
 npm-debug.log*
