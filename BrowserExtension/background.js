@@ -1,11 +1,12 @@
 // Background script for the extension
-const chrome = window.chrome // Declare the chrome variable
+
+const chrome = require("chrome") // Declare the chrome variable
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log("AI Recruiting Agent extension installed")
 })
 
-// Handle extension icon click
+// Handle extension icon click to open side panel
 chrome.action.onClicked.addListener((tab) => {
-  chrome.tabs.sendMessage(tab.id, { action: "togglePanel" })
+  chrome.sidePanel.open({ tabId: tab.id })
 })
