@@ -1,7 +1,6 @@
 const fs = require("fs-extra")
 const path = require("path")
 const { execSync } = require("child_process")
-const chrome = { runtime: { id: "your-extension-id" } } // Declare chrome variable
 
 const projectRoot = path.join(__dirname, "..")
 const extensionSource = path.join(projectRoot, "extension")
@@ -47,7 +46,7 @@ async function buildExtension() {
   </style>
 </head>
 <body>
-  <iframe src="chrome-extension://${chrome.runtime.id}/app.html" frameborder="0"></iframe>
+  <iframe src="app.html" frameborder="0"></iframe>
   
   <script>
     // Handle messages between iframe and parent
