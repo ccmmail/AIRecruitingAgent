@@ -5,26 +5,31 @@ const { execSync } = require("child_process")
 const projectRoot = path.join(__dirname, "..")
 const extensionSource = path.join(projectRoot, "extension")
 const buildDir = path.join(projectRoot, "dist-extension")
-const nextBuildDir = path.join(projectRoot, ".next")
+const nextOutDir = path.join(projectRoot, "out")
 
 async function buildExtension() {
   try {
-    console.log("🏗️  Building AI Recruiting Agent Extension...")
+    console.log("🏗️  Building AI Recruiting Agent Extension (Full Experience)...")
 
     // Clean build directory
     await fs.remove(buildDir)
     await fs.ensureDir(buildDir)
 
-    // Build Next.js app first
-    console.log("📦 Building Next.js app...")
+    // Build Next.js app with static export
+    console.log("📦 Building Next.js app with static export...")
     execSync("npm run build", { cwd: projectRoot, stdio: "inherit" })
 
-    // Copy extension files
+    // Copy extension files (manifest, background.js, etc.)
     console.log("📁 Copying extension files...")
     await fs.copy(extensionSource, buildDir)
 
-    // Create the panel.html that loads the Next.js app
-    const panelHtml = `<!DOCTYPE html>
+    // Copy the entire Next.js static export
+    if (await fs.pathExists(nextOutDir)) {
+      console.log("📦 Copying Next.js static files...")
+      await fs.copy(nextOutDir, path.join(buildDir, "app"))
+
+      // Create panel.html that loads the full Next.js app
+      const panelHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -33,6 +38,7 @@ async function buildExtension() {
   <style>
     body {
       margin: 0;
+      padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: white;
       height: 100vh;
@@ -42,62 +48,71 @@ async function buildExtension() {
       width: 100%;
       height: 100%;
       border: none;
+      display: block;
     }
   </style>
 </head>
 <body>
-  <iframe src="app.html" frameborder="0"></iframe>
+  <iframe src="app/index.html" frameborder="0" allow="clipboard-read; clipboard-write"></iframe>
   
   <script>
-    // Handle messages between iframe and parent
+    // Handle messages between iframe and parent for extension communication
     window.addEventListener("message", (event) => {
       if (event.data.type === "CLOSE_PANEL") {
-        window.parent.postMessage({ type: "CLOSE_PANEL" }, "*");
+        chrome.sidePanel.setOptions({ enabled: false });
+      }
+      if (event.data.type === "RESIZE_PANEL") {
+        // Handle panel resizing if needed
       }
     });
-  </script>
-</body>
-</html>`
 
-    await fs.writeFile(path.join(buildDir, "panel.html"), panelHtml)
-
-    // Copy Next.js build output
-    if (await fs.pathExists(nextBuildDir)) {
-      console.log("📦 Copying Next.js build files...")
-      await fs.copy(path.join(nextBuildDir, "static"), path.join(buildDir, "next-static", "static"))
-
-      // Copy the main app page
-      const appPagePath = path.join(projectRoot, "app", "page.tsx")
-      if (await fs.pathExists(appPagePath)) {
-        // Create a simple HTML file that renders the React app
-        const appHtml = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>AI Recruiting Agent</title>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { margin: 0; background: #f3f4f6; }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel">
-    // This would include your compiled React components
-    // For now, we'll redirect to the main panel
-    window.location.href = 'panel.html';
-  </script>
-</body>
-</html>`
-        await fs.writeFile(path.join(buildDir, "app.html"), appHtml)
+    // Inject extension context into iframe
+    const iframe = document.querySelector('iframe');
+    iframe.onload = function() {
+      try {
+        // Pass extension context to the app
+        iframe.contentWindow.postMessage({
+          type: 'EXTENSION_CONTEXT',
+          isExtension: true,
+          chrome: !!window.chrome?.extension
+        }, '*');
+      } catch (e) {
+        console.log('[Extension] Could not inject context:', e);
       }
+    };
+  </script>
+</body>
+</html>`
+
+      await fs.writeFile(path.join(buildDir, "panel.html"), panelHtml)
+
+      // Update manifest to include all static assets
+      const manifestPath = path.join(buildDir, "manifest.json")
+      if (await fs.pathExists(manifestPath)) {
+        const manifest = await fs.readJson(manifestPath)
+
+        // Update web_accessible_resources to include all app files
+        manifest.web_accessible_resources = [
+          {
+            resources: ["panel.html", "app/*", "app/**/*"],
+            matches: ["<all_urls>"],
+          },
+        ]
+
+        await fs.writeJson(manifestPath, manifest, { spaces: 2 })
+      }
+    } else {
+      throw new Error("Next.js build output not found. Make sure 'npm run build' completed successfully.")
     }
 
-    console.log("\n🎉 Extension built successfully!")
+    console.log("\n🎉 Full experience extension built successfully!")
     console.log(`📁 Build output: ${buildDir}`)
+    console.log("✨ This build includes the complete Next.js app with:")
+    console.log("   • Full React components and functionality")
+    console.log("   • Tailwind CSS styling")
+    console.log("   • Client-side routing")
+    console.log("   • All static assets")
+    console.log("   • Self-contained (except backend calls)")
     console.log("\n📋 To install in Chrome:")
     console.log("1. Open Chrome and go to chrome://extensions/")
     console.log('2. Enable "Developer mode" (top right toggle)')
