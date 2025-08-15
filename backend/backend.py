@@ -1,5 +1,5 @@
 """Backend API for generating tailored resumes using OpenAI."""
-
+from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Nullable
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -18,9 +18,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 PROMPT_RESUME_REVIEW_FILE = BASE_DIR / "prompts" / "prompt_resume_review_GOLD.txt"
 RESUME_FILE = BASE_DIR / "data" / "resume.txt"
 ADDITIONAL_EXPERIENCE_FILE = BASE_DIR / "data" / "additional_experience.txt"
-JOB_DESCRIPTION_FILE = BASE_DIR / "data" / "job_description.txt"
-OUTPUT_FILE = BASE_DIR / "output" / "output.txt"
-OUTPUT_DEMO_FILE = BASE_DIR / "output" / "output_demo.txt"
+JOB_DESCRIPTION_DEMO_FILE = BASE_DIR / "data" / "job_description_demo.txt"
+OUTPUT_FROM_LLM_FILE = BASE_DIR / "output" / "LLM_response.json"
+OUTPUT_FROM_LLM_DEMO_FILE = BASE_DIR / "output" / "LLM_response_demo.json"
 OUTPUT_RESUME_FILE = BASE_DIR / "output" / "resume.md"
 
 
@@ -58,14 +58,21 @@ def prompt_LLM(prompt: str) -> str:
     return response.choices[0].message.content.strip()
 
 
-@traceable(name="create_resume_review_prompt")
+def get_job_description(URL: str="") -> str:
+    """Return the job description from a given URL."""
+    # TODO: Implement logic to fetch job description based on URL
+    with open(JOB_DESCRIPTION_DEMO_FILE, "r") as file:
+        job_description = file.read()
+    return job_description
+
+
 def create_review_prompt(job_description: str) -> str:
     """Replace placeholders in prompt template to create final prompt."""
-    # read template
+    # read prompt template
     with open(PROMPT_RESUME_REVIEW_FILE, "r") as file:
         prompt = file.read()
 
-    # replace placeholders with actual data
+    # replace {{placeholders}} with actual data
     prompt = prompt.replace("{{JOB_DESCRIPTION}}", job_description)
 
     with open(RESUME_FILE, "r") as file:
@@ -81,30 +88,26 @@ def create_review_prompt(job_description: str) -> str:
 
 class JobListing(BaseModel):
     """Define the shape of data expected by /generate/resume."""
-    job_description: str # Job description to be reviewed
-    URL: str # URL of calling page for tracking purposes
-    save_output: bool = False  # if true, save LLM response and markdown resume to files
-    demo: bool = False  # if true, return statis demo response
+    job_description: str  # Job description to be reviewed
+    url: str  # URL of calling page for tracking purposes
+    save_output: bool = False   # if true, save LLM response and markdown resume to files
+    demo: bool = False   # if true, return static demo response
 
 
 @app.post("/generate/review")
 @traceable(name="generate_review_endpoint")
 def generate_review(job_listing: JobListing):
     """Generate a review and tailored resume based on the job listing."""
-    if job_listing.demo is False:
-        # if not a demo API call, create prompt and get LLM response
-        with open(JOB_DESCRIPTION_FILE, "r") as file:
-            job_listing.job_description = file.read()
+    if job_listing.demo is False: # not a demo call
         prompt = create_review_prompt(job_listing.job_description)
         response_json = prompt_LLM(prompt)
-    else:
-        # if a demo call, return a static response
-        with open(OUTPUT_DEMO_FILE, "r") as file:
+    else: # demo call
+        with open(OUTPUT_FROM_LLM_DEMO_FILE, "r") as file:
             response_json = file.read()
 
     if job_listing.save_output and job_listing.demo is False:
         # Save the response to a file
-        with open(OUTPUT_FILE, "w") as file:
+        with open(OUTPUT_FROM_LLM_FILE, "w") as file:
             file.write(response_json)
         # Save the resume markdown to a file
         response_dict = json.loads(response_json)
@@ -113,3 +116,17 @@ def generate_review(job_listing: JobListing):
             file.write(resume)
 
     return response_json
+
+
+class URL(BaseModel):
+    """Define the shape of data expected by /getJD."""
+    url: str  # URL of the page requesting the job description
+    demo: bool = False   # if true, return static demo response
+
+@app.post("/get_JD")
+def get_job_description_from_URL(url: URL):
+    """Fetch the job description from a given URL."""
+    job_description = {"job_description": get_job_description(url.url)}
+    response_json = json.dumps(job_description)
+    return response_json
+

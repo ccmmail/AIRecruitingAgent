@@ -13,8 +13,8 @@ TEST_JOB_DESCRIPTION_FILE = BASE_DIR / "data" / "test_job_description.txt"
 TEST_PROMPT_RESUME_REVIEW_FILE = BASE_DIR / "prompts" / "test_prompt.txt"
 TEST_RESUME_FILE = BASE_DIR / "data" / "test_resume.txt"
 TEST_ADDITIONAL_EXPERIENCE_FILE = BASE_DIR / "data" / "test_additional_experience.txt"
-TEST_OUTPUT_FILE = BASE_DIR / "output" / "test_output.txt"  # use as input for mock LLM response
-OUTPUT_FILE = BASE_DIR.resolve().parent / "output" / "output.txt"
+TEST_OUTPUT_FROM_LLM_FILE = BASE_DIR / "output" / "test_LLM_response_demo.json"  # use as input for mock LLM response
+OUTPUT_FILE = BASE_DIR.resolve().parent / "output" / "LLM_response.json"
 OUTPUT_RESUME_FILE = BASE_DIR.resolve().parent / "output" / "resume.md"
 
 
@@ -57,12 +57,12 @@ def test_generate_review(HTTP_client, monkeypatch):
     """Test /generate/review endpoint parses the LLM response (stubbed response)
     and generates output.txt (logs JSON response) and resume.md (clean markdown)"""
     def mock_prompt_LLM(prompt: str) -> str:
-        with open(TEST_OUTPUT_FILE, "r") as file:
+        with open(TEST_OUTPUT_FROM_LLM_FILE, "r") as file:
             mock_LLM_response = file.read()
         return mock_LLM_response
 
     monkeypatch.setattr(backend, "prompt_LLM", mock_prompt_LLM)
-    monkeypatch.setattr(backend, "JOB_DESCRIPTION_FILE", TEST_JOB_DESCRIPTION_FILE)
+    monkeypatch.setattr(backend, "JOB_DESCRIPTION_DEMO_FILE", TEST_JOB_DESCRIPTION_FILE)
 
     with open(TEST_JOB_DESCRIPTION_FILE, "r") as file:
         job_description = file.read()
@@ -71,7 +71,7 @@ def test_generate_review(HTTP_client, monkeypatch):
         json={
             "job_description": job_description,
             "save_output": True,
-            "URL": "https://example.com/bestjobever",
+            "url": "https://example.com/bestjobever",
             "demo": False
         }
     )
@@ -90,7 +90,7 @@ def test_generate_demo_review(HTTP_client, monkeypatch):
         json={
             "job_description": "fake job description for demo",
             "save_output": True,
-            "URL": "https://demo.com/bestjobever",
+            "url": "https://demo.com/bestjobever",
             "demo": True
         }
     )
@@ -100,3 +100,15 @@ def test_generate_demo_review(HTTP_client, monkeypatch):
     assert "Chung Meng Cheong" in data_dict["Tailored_Resume"]
     assert check_file_created_recently(OUTPUT_FILE) is False
     assert check_file_created_recently(OUTPUT_RESUME_FILE) is False
+
+
+def test_get_job_description(HTTP_client):
+    """Test /get_JD endpoint returns job description."""
+    response = HTTP_client.post(
+        "/get_JD",
+        json={"url": "https://example.com/job"}
+    )
+    assert response.status_code == 200
+    data_dict = json.loads(response.json())
+    assert "Chief Executive Officer" in data_dict["job_description"]
+
