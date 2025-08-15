@@ -1,6 +1,4 @@
-// Background script for the extension
-// Declare the chrome variable to fix undeclared variable error
-const chrome = window.chrome
+// Background script for the extensi
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log("AI Recruiting Agent extension installed")
