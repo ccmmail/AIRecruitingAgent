@@ -25,8 +25,9 @@ export async function postReview({ jobDescription, url }: { jobDescription: stri
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         job_description: jobDescription,
-        save_output: true,
         URL: url,
+        save_output: true,
+        demo: false,
       }),
       signal: controller.signal,
     })
@@ -139,4 +140,45 @@ export async function getCurrentTabUrl(): Promise<string> {
   }
 
   return window.location.href
+}
+
+export async function getJobDescription({ url }: { url: string }) {
+  let base: string
+
+  try {
+    // Try to get backend URL from chrome storage if available
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      const result = await chrome.storage.sync.get("backendUrl")
+      base = result?.backendUrl || process.env.BACKEND_URL || "http://localhost:8000"
+    } else {
+      base = process.env.BACKEND_URL || "http://localhost:8000"
+    }
+  } catch {
+    base = process.env.BACKEND_URL || "http://localhost:8000"
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+
+  try {
+    const res = await fetch(`${base}/get_JD`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        URL: url,
+      }),
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeoutId)
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`)
+    }
+
+    return res.json()
+  } catch (error) {
+    clearTimeout(timeoutId)
+    throw error
+  }
 }
