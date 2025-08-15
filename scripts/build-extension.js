@@ -32,63 +32,93 @@ async function buildExtension() {
       console.log("📦 Copying Next.js static files...")
       await fs.copy(nextOutDir, path.join(buildDir, "app"))
 
-      // Create panel.html that loads the full Next.js app
       const panelHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Recruiting Agent Panel</title>
+  <link rel="stylesheet" href="app/_next/static/css/app/layout.css">
+  <link rel="stylesheet" href="app/_next/static/css/app/page.css">
   <style>
     body {
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: white;
       height: 100vh;
       overflow: hidden;
     }
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      display: block;
+    #__next {
+      height: 100vh;
     }
   </style>
 </head>
 <body>
-  <iframe src="app/index.html" frameborder="0" allow="clipboard-read; clipboard-write"></iframe>
+  <div id="__next"></div>
   
   <script>
-    // Handle messages between iframe and parent for extension communication
-    window.addEventListener("message", (event) => {
-      if (event.data.type === "CLOSE_PANEL") {
-        chrome.sidePanel.setOptions({ enabled: false });
-      }
-      if (event.data.type === "RESIZE_PANEL") {
-        // Handle panel resizing if needed
-      }
-    });
-
-    // Inject extension context into iframe
-    const iframe = document.querySelector('iframe');
-    iframe.onload = function() {
-      try {
-        // Pass extension context to the app
-        iframe.contentWindow.postMessage({
-          type: 'EXTENSION_CONTEXT',
-          isExtension: true,
-          chrome: !!window.chrome?.extension
-        }, '*');
-      } catch (e) {
-        console.log('[Extension] Could not inject context:', e);
-      }
+    // Extension context
+    window.__EXTENSION_CONTEXT__ = {
+      isExtension: true,
+      chrome: !!window.chrome?.extension
     };
   </script>
+  
+  <!-- Load Next.js chunks -->
+  <script src="app/_next/static/chunks/webpack.js"></script>
+  <script src="app/_next/static/chunks/framework.js"></script>
+  <script src="app/_next/static/chunks/main.js"></script>
+  <script src="app/_next/static/chunks/pages/_app.js"></script>
+  <script src="app/_next/static/chunks/pages/index.js"></script>
 </body>
 </html>`
 
       await fs.writeFile(path.join(buildDir, "panel.html"), panelHtml)
+
+      const nextIndexPath = path.join(nextOutDir, "index.html")
+      if (await fs.pathExists(nextIndexPath)) {
+        const nextIndexContent = await fs.readFile(nextIndexPath, "utf8")
+
+        // Extract CSS and JS links from Next.js build
+        const cssLinks = nextIndexContent.match(/<link[^>]*rel="stylesheet"[^>]*>/g) || []
+        const jsScripts = nextIndexContent.match(/<script[^>]*src="[^"]*"[^>]*><\/script>/g) || []
+
+        // Create proper panel.html with extracted assets
+        const improvedPanelHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Recruiting Agent Panel</title>
+  ${cssLinks.map((link) => link.replace(/href="([^"]*)"/, 'href="app/$1"')).join("\n  ")}
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #__next {
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="__next"></div>
+  
+  <script>
+    // Extension context
+    window.__EXTENSION_CONTEXT__ = {
+      isExtension: true,
+      chrome: !!window.chrome?.extension
+    };
+  </script>
+  
+  ${jsScripts.map((script) => script.replace(/src="([^"]*)"/, 'src="app/$1"')).join("\n  ")}
+</body>
+</html>`
+
+        await fs.writeFile(path.join(buildDir, "panel.html"), improvedPanelHtml)
+      }
 
       // Update manifest to include all static assets
       const manifestPath = path.join(buildDir, "manifest.json")
