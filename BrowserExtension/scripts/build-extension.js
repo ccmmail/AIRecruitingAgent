@@ -3,7 +3,6 @@ const path = require("path")
 const { execSync } = require("child_process")
 
 const projectRoot = path.join(__dirname, "..")
-const extensionSource = path.join(projectRoot, "extension")
 const buildDir = path.join(projectRoot, "dist-extension")
 const nextOutDir = path.join(projectRoot, "out")
 
@@ -19,9 +18,14 @@ async function buildExtension() {
     console.log("📦 Building Next.js app with static export...")
     execSync("npm run build", { cwd: projectRoot, stdio: "inherit" })
 
-    // Copy extension files (manifest, background.js, etc.)
-    console.log("📁 Copying extension files...")
-    await fs.copy(extensionSource, buildDir)
+    console.log("📁 Copying extension files from root...")
+    const filesToCopy = ["manifest.json", "background.js", "content.js", "content.css"]
+    for (const file of filesToCopy) {
+      const sourcePath = path.join(projectRoot, file)
+      if (await fs.pathExists(sourcePath)) {
+        await fs.copy(sourcePath, path.join(buildDir, file))
+      }
+    }
 
     // Copy the entire Next.js static export
     if (await fs.pathExists(nextOutDir)) {
