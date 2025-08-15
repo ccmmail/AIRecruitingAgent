@@ -24,7 +24,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["panel.html", "_next/*"],
+      "resources": ["panel.html", "next-static/*"],
       "matches": ["<all_urls>"]
     }
   ]
