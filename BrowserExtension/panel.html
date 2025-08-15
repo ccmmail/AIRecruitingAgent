@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Recruiting Agent Panel</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: white;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+
+    /* Tailwind-like utilities for components not available via CDN */
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Simplified components for the extension
+    const Button = ({ children, onClick, disabled, className = "", variant = "default", size = "default" }) => {
+      const baseClasses = "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
+      const variants = {
+        default: "bg-blue-600 text-white hover:bg-blue-700",
+        outline: "border border-gray-300 bg-white hover:bg-gray-50",
+        secondary: "bg-gray-100 text-gray-900 hover:bg-gray-200",
+        ghost: "hover:bg-gray-100"
+      };
+      const sizes = {
+        default: "h-10 py-2 px-4",
+        sm: "h-9 px-3 text-sm",
+        lg: "h-11 px-8"
+      };
+      
+      return (
+        <button
+          className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`}
+          onClick={onClick}
+          disabled={disabled}
+        >
+          {children}
+        </button>
+      );
+    };
+
+    const Badge = ({ children, variant = "default", className = "" }) => {
+      const variants = {
+        default: "bg-blue-600 text-white",
+        secondary: "bg-gray-100 text-gray-900"
+      };
+      return (
+        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${variants[variant]} ${className}`}>
+          {children}
+        </span>
+      );
+    };
+
+    const Textarea = ({ value, onChange, placeholder, className = "", rows = 3, ...props }) => (
+      <textarea
+        className={`flex min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        rows={rows}
+        {...props}
+      />
+    );
+
+    const Input = ({ value, onChange, placeholder, className = "", ...props }) => (
+      <input
+        className={`flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        {...props}
+      />
+    );
+
+    const Label = ({ children, htmlFor, className = "" }) => (
+      <label htmlFor={htmlFor} className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${className}`}>
+        {children}
+      </label>
+    );
+
+    const Switch = ({ checked, onCheckedChange, id }) => (
+      <button
+        id={id}
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onCheckedChange(!checked)}
+        className={`peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${
+          checked ? 'bg-blue-600' : 'bg-gray-200'
+        }`}
+      >
+        <span className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${
+          checked ? 'translate-x-5' : 'translate-x-0'
+        }`} />
+      </button>
+    );
+
+    // Icons (simplified SVG versions)
+    const FileText = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    );
+
+    const X = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    );
+
+    const Copy = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      </svg>
+    );
+
+    const Download = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    );
+
+    const Loader2 = ({ className = "w-4 h-4" }) => (
+      <svg className={`${className} animate-spin`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.49 8.49l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.49-8.49l2.83-2.83" />
+      </svg>
+    );
+
+    // Demo data
+    const DEMO_JOB_DESCRIPTION = `Chief Executive Officer - AI Robotics Startup
+
+We are seeking an experienced Chief Executive Officer to lead our early-stage AI robotics company focused on autonomous navigation and perception systems.
+
+Key Requirements:
+• 10+ years of progressive leadership experience in startup or growth-stage environments
+• Strong background in technology, AI, robotics, or autonomous systems
+• Proven experience building and scaling engineering teams, particularly in navigation, SLAM, perception, or embedded systems
+• Track record of capital raising, investor relations, and exit/IPO planning
+• Hands-on collaboration with engineering and technical leadership
+• Ability to build company culture focused on innovation, accountability, and speed
+• Technical domain expertise in robotics/autonomous navigation preferred
+• Education: Engineering/CS degree or MBA preferred
+
+This is an exceptional opportunity to lead a cutting-edge AI company at the forefront of autonomous robotics technology.`;
+
+    const DEMO_RESPONSE = {
+      Fit: {
+        score: 7,
+        rationale: "The candidate has extensive C-level experience in technology-driven organizations, including product innovation, AI integration, and scaling operations. They have led large teams, driven transformations, and delivered measurable growth, aligning with the leadership and scaling needs of the CEO role. However, there are notable gaps: no direct autonomous navigation, robotics, or deep engineering leadership background; limited evidence of fundraising or startup capital raising; and most roles are in later-stage or established companies rather than early-stage founder/CEO settings. Seniority and strategic leadership fit are strong, but technical domain fit is partial."
+      },
+      Gap_Map: [
+        {
+          "JD Requirement/Keyword": "Autonomous navigation / robotics / AI domain experience",
+          "Present in Resume?": "Partial",
+          "Where/Evidence": "Silver Lake portfolio work and Move Inc AI/ML personalization projects; no explicit robotics or navigation systems experience.",
+          "Gap handling": "Add any relevant exposure to robotics, sensors, or navigation from portfolio work; emphasize AI aspects."
+        }
+      ],
+      Questions: [
+        "Have you had direct involvement with fundraising, investor relations, or presenting to VCs/private equity for capital raises?",
+        "Have you worked on products involving robotics, autonomous navigation, or hardware-integrated AI systems?"
+      ],
+      Tailored_Resume: "Sample tailored resume content with <span style=\"color:#008000\"><add>AI and robotics experience</add></span> highlighted."
+    };
+
+    // Main Extension Panel Component
+    const ExtensionPanel = () => {
+      const [isOpen, setIsOpen] = useState(true);
+      const [activeTab, setActiveTab] = useState("job-description");
+      const [jobDescription, setJobDescription] = useState("");
+      const [activeTabUrl, setActiveTabUrl] = useState("");
+      const [isLoading, setIsLoading] = useState(false);
+      const [error, setError] = useState(null);
+      const [review, setReview] = useState(null);
+      const [tailoredMarkdown, setTailoredMarkdown] = useState("");
+      const [showRedlines, setShowRedlines] = useState(true);
+      const [isDemoMode, setIsDemoMode] = useState(true);
+      const [copyFeedback, setCopyFeedback] = useState(false);
+      const [downloadFeedback, setDownloadFeedback] = useState(false);
+
+      useEffect(() => {
+        // Get current page URL
+        window.parent.postMessage({ type: 'GET_PAGE_URL' }, '*');
+        
+        window.addEventListener('message', (event) => {
+          if (event.data.type === 'PAGE_URL_RESPONSE') {
+            setActiveTabUrl(event.data.url);
+          }
+        });
+
+        // Initialize demo mode
+        if (isDemoMode) {
+          setJobDescription(DEMO_JOB_DESCRIPTION);
+          setReview(DEMO_RESPONSE);
+          setTailoredMarkdown(DEMO_RESPONSE.Tailored_Resume);
+        }
+      }, [isDemoMode]);
+
+      const getFitScoreStyle = (score) => {
+        if (score >= 9) return "bg-green-800 text-white";
+        if (score >= 7) return "bg-green-200 text-green-800";
+        if (score >= 5) return "bg-orange-200 text-orange-800";
+        if (score >= 3) return "bg-red-200 text-red-800";
+        return "bg-red-800 text-white";
+      };
+
+      const handleSendToReview = async () => {
+        if (!jobDescription.trim()) return;
+
+        if (isDemoMode) {
+          setIsDemoMode(false);
+          setIsLoading(true);
+          setTimeout(() => {
+            setIsLoading(false);
+            setActiveTab("review");
+          }, 2000);
+          return;
+        }
+
+        setIsLoading(true);
+        setError(null);
+
+        try {
+          // In a real extension, this would make an API call
+          // For now, we'll simulate with demo data
+          setTimeout(() => {
+            setReview(DEMO_RESPONSE);
+            setTailoredMarkdown(DEMO_RESPONSE.Tailored_Resume);
+            setActiveTab("review");
+            setIsLoading(false);
+          }, 3000);
+        } catch (err) {
+          setError("Failed to generate review");
+          setIsLoading(false);
+        }
+      };
+
+      const handleCopyMarkdown = async () => {
+        if (!tailoredMarkdown) return;
+        try {
+          await navigator.clipboard.writeText(tailoredMarkdown);
+          setCopyFeedback(true);
+          setTimeout(() => setCopyFeedback(false), 2000);
+        } catch (err) {
+          console.error("Failed to copy:", err);
+        }
+      };
+
+      const handleDownloadMarkdown = () => {
+        if (!tailoredMarkdown) return;
+        const blob = new Blob([tailoredMarkdown], { type: "text/markdown" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "resume.md";
+        a.click();
+        URL.revokeObjectURL(url);
+        setDownloadFeedback(true);
+        setTimeout(() => setDownloadFeedback(false), 2000);
+      };
+
+      const handleClose = () => {
+        window.parent.postMessage({ type: 'CLOSE_PANEL' }, '*');
+      };
+
+      if (!isOpen) return null;
+
+      return (
+        <div className="h-screen w-96 bg-white border-l shadow-lg flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+                <FileText className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-sm">AI Recruiting Agent</h2>
+                <p className="text-xs text-gray-500">AI-Powered Job Application Helper</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleClose}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex-1 flex flex-col">
+            <div className="grid grid-cols-3 m-4 mb-0 bg-gray-100 rounded-lg p-1">
+              <button
+                className={`px-3 py-2 text-sm rounded-md transition-colors ${
+                  activeTab === "job-description" ? "bg-white shadow-sm" : "hover:bg-gray-200"
+                }`}
+                onClick={() => setActiveTab("job-description")}
+              >
+                JD
+              </button>
+              <button
+                className={`px-3 py-2 text-sm rounded-md transition-colors ${
+                  activeTab === "review" ? "bg-white shadow-sm" : "hover:bg-gray-200"
+                } ${!review ? "opacity-50 cursor-not-allowed" : ""}`}
+                onClick={() => review && setActiveTab("review")}
+                disabled={!review}
+              >
+                Review
+              </button>
+              <button
+                className={`px-3 py-2 text-sm rounded-md transition-colors ${
+                  activeTab === "resume" ? "bg-white shadow-sm" : "hover:bg-gray-200"
+                } ${!tailoredMarkdown ? "opacity-50 cursor-not-allowed" : ""}`}
+                onClick={() => tailoredMarkdown && setActiveTab("resume")}
+                disabled={!tailoredMarkdown}
+              >
+                Resume
+              </button>
+            </div>
+
+            {/* Job Description Tab */}
+            {activeTab === "job-description" && (
+              <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="job-description" className="text-base font-medium">
+                    Job Description
+                  </Label>
+                  <Button onClick={handleSendToReview} disabled={!jobDescription.trim() || isLoading} size="sm">
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2" />
+                        {isDemoMode ? "Loading..." : "Generating..."}
+                      </>
+                    ) : isDemoMode ? (
+                      "View Analysis"
+                    ) : (
+                      "Submit for Review"
+                    )}
+                  </Button>
+                </div>
+
+                {isDemoMode && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="default" className="text-xs">Demo</Badge>
+                      <span className="text-sm font-medium">Example Job Description</span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      This is a demo with a sample job description and resume. Click "View Analysis" to continue demo or clear the text below to exit demo mode.
+                    </p>
+                  </div>
+                )}
+
+                <Textarea
+                  id="job-description"
+                  placeholder="Paste job description here..."
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  rows={8}
+                />
+
+                <div>
+                  <Label htmlFor="url">Page URL</Label>
+                  <Input id="url" value={activeTabUrl} readOnly className="mt-2 text-xs" />
+                </div>
+
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-sm text-red-600">{error}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Review Tab */}
+            {activeTab === "review" && review && (
+              <div className="flex-1 p-4 overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Badge className={`text-lg px-3 py-1 ${getFitScoreStyle(review.Fit.score)}`}>
+                      {review.Fit.score}/10
+                    </Badge>
+                    <span className="font-medium text-2xl">Fit</span>
+                  </div>
+                  <Button size="sm" onClick={() => setActiveTab("resume")} disabled={!tailoredMarkdown}>
+                    See Resume Recommendations
+                  </Button>
+                </div>
+
+                {isDemoMode && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-md mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="default" className="text-xs">Demo</Badge>
+                      <span className="text-sm font-medium">Example resume review</span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Our AI assesses your qualifications against the job's "must-haves" and scores your fit for the job.
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-semibold mb-2">Rationale</h3>
+                    <p className="text-sm text-gray-500">{review.Fit.rationale}</p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3">Gap Analysis</h3>
+                    <div className="space-y-3">
+                      {review.Gap_Map.map((gap, index) => (
+                        <div key={index} className="p-3 border rounded-md">
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between">
+                              <span className="font-medium text-sm">{gap["JD Requirement/Keyword"]}</span>
+                              <Badge variant={gap["Present in Resume?"] === "Y" ? "default" : "secondary"}>
+                                {gap["Present in Resume?"]}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              <div><strong>Evidence:</strong> {gap["Where/Evidence"]}</div>
+                              <div><strong>Suggested Action:</strong> {gap["Gap handling"]}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Resume Tab */}
+            {activeTab === "resume" && (
+              <div className="flex-1 p-4 overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="redline-toggle" className="text-sm font-medium">Redline</Label>
+                      <Switch id="redline-toggle" checked={showRedlines} onCheckedChange={setShowRedlines} />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopyMarkdown}
+                      disabled={!tailoredMarkdown}
+                      className={copyFeedback ? "bg-green-50 border-green-300" : ""}
+                    >
+                      <Copy className="w-4 h-4 mr-1" />
+                      {copyFeedback ? "Copied!" : "Copy"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDownloadMarkdown}
+                      disabled={!tailoredMarkdown}
+                      className={downloadFeedback ? "bg-green-50 border-green-300" : ""}
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      {downloadFeedback ? "Downloaded!" : "Download"}
+                    </Button>
+                  </div>
+                </div>
+
+                {isDemoMode && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="default" className="text-xs">Demo</Badge>
+                      <span className="text-sm font-medium">Example tailored resume</span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Our AI suggests a tailored resume for the job. Toggle "Redline" off to see clean version.
+                    </p>
+                  </div>
+                )}
+
+                <div className="bg-white p-6 border rounded-md">
+                  {tailoredMarkdown ? (
+                    <div className="font-serif leading-relaxed">
+                      {showRedlines ? (
+                        <div dangerouslySetInnerHTML={{ __html: tailoredMarkdown }} />
+                      ) : (
+                        <div dangerouslySetInnerHTML={{ 
+                          __html: tailoredMarkdown
+                            .replace(/<span style="color:#c00000"><del>.*?<\/del><\/span>/g, "")
+                            .replace(/<span style="color:#008000"><add>(.*?)<\/add><\/span>/g, "$1")
+                            .replace(/<span style="color:#008000">(.*?)<\/span>/g, "$1")
+                        }} />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-32 text-gray-500">
+                      <p className="text-sm">No resume recommendations available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    // Render the app
+    ReactDOM.render(<ExtensionPanel />, document.getElementById('root'));
+  </script>
+</body>
+</html>
