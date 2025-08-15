@@ -1,7 +1,5 @@
 // Background script for the extension
-// chrome variable is globally available in Chrome extensions
-
-// Declare the chrome variable to fix lint/correctness/noUndeclaredVariables error
+// Declare the chrome variable to fix undeclared variable error
 const chrome = window.chrome
 
 chrome.runtime.onInstalled.addListener(() => {
