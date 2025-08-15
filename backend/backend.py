@@ -20,6 +20,7 @@ RESUME_FILE = BASE_DIR / "data" / "resume.txt"
 ADDITIONAL_EXPERIENCE_FILE = BASE_DIR / "data" / "additional_experience.txt"
 JOB_DESCRIPTION_FILE = BASE_DIR / "data" / "job_description.txt"
 OUTPUT_FILE = BASE_DIR / "output" / "output.txt"
+OUTPUT_DEMO_FILE = BASE_DIR / "output" / "output_demo.txt"
 OUTPUT_RESUME_FILE = BASE_DIR / "output" / "resume.md"
 
 
@@ -80,19 +81,28 @@ def create_review_prompt(job_description: str) -> str:
 
 class JobListing(BaseModel):
     """Define the shape of data expected by /generate/resume."""
-    job_description: str
-    URL: str
-    save_output: bool = True
+    job_description: str # Job description to be reviewed
+    URL: str # URL of calling page for tracking purposes
+    save_output: bool = False  # if true, save LLM response and markdown resume to files
+    demo: bool = False  # if true, return statis demo response
 
 
 @app.post("/generate/review")
 @traceable(name="generate_review_endpoint")
 def generate_review(job_listing: JobListing):
     """Generate a review and tailored resume based on the job listing."""
-    prompt = create_review_prompt(job_listing.job_description)
-    response_json = prompt_LLM(prompt)
+    if job_listing.demo is False:
+        # if not a demo API call, create prompt and get LLM response
+        with open(JOB_DESCRIPTION_FILE, "r") as file:
+            job_listing.job_description = file.read()
+        prompt = create_review_prompt(job_listing.job_description)
+        response_json = prompt_LLM(prompt)
+    else:
+        # if a demo call, return a static response
+        with open(OUTPUT_DEMO_FILE, "r") as file:
+            response_json = file.read()
 
-    if job_listing.save_output:
+    if job_listing.save_output and job_listing.demo is False:
         # Save the response to a file
         with open(OUTPUT_FILE, "w") as file:
             file.write(response_json)
