@@ -50,6 +50,7 @@ export default function Component() {
   const [isLoading, setIsLoading] = useState(false)
   const [isInitialLoading, setIsInitialLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [initError, setInitError] = useState<string | null>(null)
   const [review, setReview] = useState<ReviewData | null>(null)
   const [tailoredMarkdown, setTailoredMarkdown] = useState("")
   const [showRedlines, setShowRedlines] = useState(true)
@@ -85,6 +86,8 @@ export default function Component() {
         }
       } catch (error) {
         console.log("[v0] Failed to initialize panel:", error)
+        setInitError(error instanceof Error ? error.message : "Failed to load job description from this page")
+
         // Fallback to current URL if API calls fail
         try {
           const url = await getCurrentTabUrl()
@@ -304,6 +307,19 @@ export default function Component() {
                   This is automatically populated from the job posting page. You can edit it before submitting for
                   review.
                 </Tooltip>
+              )}
+
+              {initError && (
+                <div className="p-3 bg-orange-50 border border-orange-200 rounded-md">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-orange-800 font-medium">Could not auto-load job description</p>
+                      <p className="text-xs text-orange-700 mt-1">{initError}</p>
+                      <p className="text-xs text-orange-600 mt-2">Please paste the job description manually below.</p>
+                    </div>
+                  </div>
+                </div>
               )}
 
               <Textarea
