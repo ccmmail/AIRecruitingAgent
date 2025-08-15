@@ -1,4 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+package.json
+manifest.json
+/dist-extension
 
 # dependencies
 /node_modules
