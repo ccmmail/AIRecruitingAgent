@@ -62,8 +62,7 @@ window.__EXTENSION_CONTEXT__ = {
   chrome: !!window.chrome?.extension
 };
 
-// Disable demo mode in extension
-window.__DISABLE_DEMO_MODE__ = true;
+window.__ENABLE_DEMO_MODE__ = true;
 
 // Next.js inline scripts
 ${inlineScripts.join("\n\n")}
@@ -73,6 +72,8 @@ ${inlineScripts.join("\n\n")}
           // Add reference to external script
           nextIndexContent = nextIndexContent.replace("</head>", `  <script src="extension-init.js"></script>\n</head>`)
         }
+
+        nextIndexContent = nextIndexContent.replace(/<link[^>]*rel="preload"[^>]*as="font"[^>]*>/gi, "")
 
         // Add extension styling
         const extensionStyles = `

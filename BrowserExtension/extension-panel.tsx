@@ -53,7 +53,7 @@ export default function Component() {
   const [tailoredMarkdown, setTailoredMarkdown] = useState("")
   const [showRedlines, setShowRedlines] = useState(true)
   const [questionAnswers, setQuestionAnswers] = useState<Record<number, string>>({})
-  const [isDemoMode, setIsDemoMode] = useState(true)
+  const [isDemoMode, setIsDemoMode] = useState(false)
   const [isSubmittingQuestions, setIsSubmittingQuestions] = useState(false)
   const [questionsSubmitted, setQuestionsSubmitted] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState(false)
@@ -61,6 +61,7 @@ export default function Component() {
 
   useEffect(() => {
     const isExtension = window.__EXTENSION_CONTEXT__?.isExtension || false
+    const shouldEnableDemo = window.__ENABLE_DEMO_MODE__ || (!isExtension && isDemoMode)
 
     getCurrentTabUrl()
       .then(setActiveTabUrl)
@@ -68,12 +69,13 @@ export default function Component() {
         setActiveTabUrl(window.location.href)
       })
 
-    if (!isExtension && isDemoMode) {
+    if (shouldEnableDemo) {
       setJobDescription(DEMO_JOB_DESCRIPTION)
       setReview(DEMO_RESPONSE)
       setTailoredMarkdown(DEMO_RESPONSE.Tailored_Resume)
+      setIsDemoMode(true)
     }
-  }, [isDemoMode])
+  }, [])
 
   const getFitScoreStyle = (score: number) => {
     if (score >= 9) return "bg-green-800 text-white"
@@ -88,12 +90,9 @@ export default function Component() {
 
     if (isDemoMode) {
       setIsDemoMode(false)
-      setIsLoading(true)
-      // Simulate loading for demo
-      setTimeout(() => {
-        setIsLoading(false)
-        setActiveTab("review")
-      }, 2000)
+      setJobDescription("")
+      setReview(null)
+      setTailoredMarkdown("")
       return
     }
 
@@ -140,15 +139,12 @@ export default function Component() {
     let updatedMarkdown = tailoredMarkdown
 
     if (changeId.startsWith("del-")) {
-      // Accept deletion = remove the text entirely
       updatedMarkdown = updatedMarkdown.replace(originalMarkup, "")
     } else if (changeId.startsWith("add-")) {
-      // Accept addition = keep text, remove markup
       const textMatch = originalMarkup.match(/<add>(.*?)<\/add>/)
       if (textMatch) {
         updatedMarkdown = updatedMarkdown.replace(originalMarkup, textMatch[1])
       } else {
-        // Handle regular span format
         const spanMatch = originalMarkup.match(/<span[^>]*>(.*?)<\/span>/)
         if (spanMatch) {
           updatedMarkdown = updatedMarkdown.replace(originalMarkup, spanMatch[1])
@@ -163,13 +159,11 @@ export default function Component() {
     let updatedMarkdown = tailoredMarkdown
 
     if (changeId.startsWith("del-")) {
-      // Reject deletion = keep text, remove markup
       const textMatch = originalMarkup.match(/<del>(.*?)<\/del>/)
       if (textMatch) {
         updatedMarkdown = updatedMarkdown.replace(originalMarkup, textMatch[1])
       }
     } else if (changeId.startsWith("add-")) {
-      // Reject addition = remove text entirely
       updatedMarkdown = updatedMarkdown.replace(originalMarkup, "")
     }
 
@@ -177,7 +171,6 @@ export default function Component() {
   }
 
   const handleEditChange = (changeId: string, originalMarkup: string, newText: string) => {
-    // Replace the original markup with the edited text
     const updatedMarkdown = tailoredMarkdown.replace(originalMarkup, newText)
     setTailoredMarkdown(updatedMarkdown)
   }
@@ -202,11 +195,9 @@ export default function Component() {
       const content = showRedlines ? tailoredMarkdown : cleanMarkdown(tailoredMarkdown)
       const filename = showRedlines ? "resume_redline.md" : "resume.md"
 
-      // Create blob and download
       const blob = new Blob([content], { type: "text/markdown;charset=utf-8" })
       const url = URL.createObjectURL(blob)
 
-      // Create temporary link and trigger download
       const link = document.createElement("a")
       link.href = url
       link.download = filename
@@ -216,7 +207,6 @@ export default function Component() {
       link.click()
       document.body.removeChild(link)
 
-      // Clean up the URL and show feedback
       setTimeout(() => URL.revokeObjectURL(url), 100)
       setDownloadFeedback(true)
       setTimeout(() => setDownloadFeedback(false), 2000)
@@ -229,7 +219,6 @@ export default function Component() {
 
   return (
     <div className="fixed right-0 top-0 h-full w-96 bg-background border-l shadow-lg z-50 flex flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
@@ -245,7 +234,6 @@ export default function Component() {
         </Button>
       </div>
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
         <TabsList className="grid w-full grid-cols-5 m-4 mb-0">
           <TabsTrigger value="job-description" className="flex items-center gap-1">
@@ -270,7 +258,6 @@ export default function Component() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Job Description Tab */}
         <TabsContent value="job-description" className="flex-1 m-0">
           <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
@@ -336,7 +323,6 @@ export default function Component() {
           </div>
         </TabsContent>
 
-        {/* Review Tab */}
         <TabsContent value="review" className="flex-1 m-0">
           {review && (
             <div className="p-4">
@@ -370,13 +356,11 @@ export default function Component() {
 
               <ScrollArea className="h-[calc(100vh-250px)]">
                 <div className="space-y-6">
-                  {/* Rationale */}
                   <div>
                     <h3 className="font-semibold mb-2">Rationale</h3>
                     <p className="text-sm text-muted-foreground">{review.Fit.rationale}</p>
                   </div>
 
-                  {/* Gap Map */}
                   <div>
                     <h3 className="font-semibold mb-3">Gap Analysis against Job "Must Haves"</h3>
                     <div className="space-y-3">
@@ -403,7 +387,6 @@ export default function Component() {
                     </div>
                   </div>
 
-                  {/* Questions */}
                   <div>
                     <h3 className="font-semibold mb-2">Additional info for AI reviewer</h3>
                     <p className="text-xs text-muted-foreground mb-3">
@@ -435,7 +418,6 @@ export default function Component() {
                 </div>
               </ScrollArea>
 
-              {/* Submit Questions Button */}
               <div className="mt-4 pt-4 border-t">
                 <Button
                   onClick={handleSubmitQuestions}
@@ -465,7 +447,6 @@ export default function Component() {
           )}
         </TabsContent>
 
-        {/* Resume Tab */}
         <TabsContent value="resume" className="flex-1 m-0">
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
@@ -546,7 +527,6 @@ export default function Component() {
           </div>
         </TabsContent>
 
-        {/* Cover Letter Tab */}
         <TabsContent value="cover-letter" className="flex-1 m-0">
           <div className="p-4">
             <div className="flex items-center gap-2 mb-4">
@@ -559,7 +539,6 @@ export default function Component() {
           </div>
         </TabsContent>
 
-        {/* Contacts Tab */}
         <TabsContent value="contacts" className="flex-1 m-0">
           <div className="p-4">
             <div className="flex items-center gap-2 mb-4">
