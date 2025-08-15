@@ -25,7 +25,7 @@ export async function postReview({ jobDescription, url }: { jobDescription: stri
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         job_description: jobDescription,
-        URL: url,
+        url: url,
         save_output: true,
         demo: false,
       }),
@@ -165,7 +165,7 @@ export async function getJobDescription({ url }: { url: string }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        URL: url,
+        url: url,
       }),
       signal: controller.signal,
     })
