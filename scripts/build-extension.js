@@ -36,6 +36,17 @@ async function buildExtension() {
       if (await fs.pathExists(nextIndexPath)) {
         let nextIndexContent = await fs.readFile(nextIndexPath, "utf8")
 
+        const inlineScripts = []
+        nextIndexContent = nextIndexContent.replace(
+          /<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/gi,
+          (match, content) => {
+            if (content.trim()) {
+              inlineScripts.push(content.trim())
+            }
+            return "" // Remove inline script
+          },
+        )
+
         // Fix asset paths to work in extension context
         nextIndexContent = nextIndexContent
           .replace(/href="\/_next/g, 'href="app/_next')
@@ -43,18 +54,28 @@ async function buildExtension() {
           .replace(/href="\/favicon/g, 'href="app/favicon')
           .replace(/src="\/favicon/g, 'src="app/favicon')
 
-        // Add extension context and styling
-        const extensionScript = `
-  <script>
-    // Extension context detection
-    window.__EXTENSION_CONTEXT__ = {
-      isExtension: true,
-      chrome: !!window.chrome?.extension
-    };
-    
-    // Disable demo mode in extension
-    window.__DISABLE_DEMO_MODE__ = true;
-  </script>
+        if (inlineScripts.length > 0) {
+          const scriptContent = `
+// Extension context detection
+window.__EXTENSION_CONTEXT__ = {
+  isExtension: true,
+  chrome: !!window.chrome?.extension
+};
+
+// Disable demo mode in extension
+window.__DISABLE_DEMO_MODE__ = true;
+
+// Next.js inline scripts
+${inlineScripts.join("\n\n")}
+`
+          await fs.writeFile(path.join(buildDir, "extension-init.js"), scriptContent)
+
+          // Add reference to external script
+          nextIndexContent = nextIndexContent.replace("</head>", `  <script src="extension-init.js"></script>\n</head>`)
+        }
+
+        // Add extension styling
+        const extensionStyles = `
   <style>
     body {
       margin: 0;
@@ -67,8 +88,8 @@ async function buildExtension() {
     }
   </style>`
 
-        // Insert the script and styles before closing head tag
-        nextIndexContent = nextIndexContent.replace("</head>", `${extensionScript}\n</head>`)
+        // Insert the styles before closing head tag
+        nextIndexContent = nextIndexContent.replace("</head>", `${extensionStyles}\n</head>`)
 
         await fs.writeFile(path.join(buildDir, "panel.html"), nextIndexContent)
       } else {
@@ -80,10 +101,9 @@ async function buildExtension() {
       if (await fs.pathExists(manifestPath)) {
         const manifest = await fs.readJson(manifestPath)
 
-        // Update web_accessible_resources to include all app files
         manifest.web_accessible_resources = [
           {
-            resources: ["panel.html", "app/*", "app/**/*"],
+            resources: ["panel.html", "extension-init.js", "app/*", "app/**/*"],
             matches: ["<all_urls>"],
           },
         ]
@@ -101,6 +121,7 @@ async function buildExtension() {
     console.log("   • Tailwind CSS styling")
     console.log("   • Client-side routing")
     console.log("   • All static assets")
+    console.log("   • CSP-compliant external scripts")
     console.log("   • Self-contained (except backend calls)")
     console.log("\n📋 To install in Chrome:")
     console.log("1. Open Chrome and go to chrome://extensions/")
