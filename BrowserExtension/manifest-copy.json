@@ -6,8 +6,7 @@
   "permissions": ["activeTab", "storage", "tabs", "sidePanel"],
   "host_permissions": ["http://localhost:8000/*", "https://*/*"],
   "action": {
-    "default_title": "AI Recruiting Agent",
-    "default_popup": "popup.html"
+    "default_title": "AI Recruiting Agent"
   },
   "side_panel": {
     "default_path": "panel.html"
