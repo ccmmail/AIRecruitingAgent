@@ -65,7 +65,8 @@ export default function Component() {
 
     getCurrentTabUrl()
       .then(setActiveTabUrl)
-      .catch(() => {
+      .catch((error) => {
+        console.log("[v0] Failed to get current tab URL:", error)
         setActiveTabUrl(window.location.href)
       })
 
@@ -89,10 +90,7 @@ export default function Component() {
     if (!jobDescription.trim()) return
 
     if (isDemoMode) {
-      setIsDemoMode(false)
-      setJobDescription("")
-      setReview(null)
-      setTailoredMarkdown("")
+      setActiveTab("review")
       return
     }
 
@@ -129,7 +127,7 @@ export default function Component() {
       await postQuestions({ questionsAnswers })
       setQuestionsSubmitted(true)
     } catch (err) {
-      console.error("Failed to submit questions:", err)
+      console.log("[v0] Failed to submit questions:", err)
     } finally {
       setIsSubmittingQuestions(false)
     }
@@ -184,7 +182,7 @@ export default function Component() {
       setCopyFeedback(true)
       setTimeout(() => setCopyFeedback(false), 2000)
     } catch (err) {
-      console.error("Failed to copy:", err)
+      console.log("[v0] Failed to copy to clipboard:", err)
     }
   }
 
