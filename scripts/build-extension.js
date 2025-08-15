@@ -32,92 +32,47 @@ async function buildExtension() {
       console.log("📦 Copying Next.js static files...")
       await fs.copy(nextOutDir, path.join(buildDir, "app"))
 
-      const panelHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Recruiting Agent Panel</title>
-  <link rel="stylesheet" href="app/_next/static/css/app/layout.css">
-  <link rel="stylesheet" href="app/_next/static/css/app/page.css">
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      overflow: hidden;
-    }
-    #__next {
-      height: 100vh;
-    }
-  </style>
-</head>
-<body>
-  <div id="__next"></div>
-  
-  <script>
-    // Extension context
-    window.__EXTENSION_CONTEXT__ = {
-      isExtension: true,
-      chrome: !!window.chrome?.extension
-    };
-  </script>
-  
-  <!-- Load Next.js chunks -->
-  <script src="app/_next/static/chunks/webpack.js"></script>
-  <script src="app/_next/static/chunks/framework.js"></script>
-  <script src="app/_next/static/chunks/main.js"></script>
-  <script src="app/_next/static/chunks/pages/_app.js"></script>
-  <script src="app/_next/static/chunks/pages/index.js"></script>
-</body>
-</html>`
-
-      await fs.writeFile(path.join(buildDir, "panel.html"), panelHtml)
-
       const nextIndexPath = path.join(nextOutDir, "index.html")
       if (await fs.pathExists(nextIndexPath)) {
-        const nextIndexContent = await fs.readFile(nextIndexPath, "utf8")
+        let nextIndexContent = await fs.readFile(nextIndexPath, "utf8")
 
-        // Extract CSS and JS links from Next.js build
-        const cssLinks = nextIndexContent.match(/<link[^>]*rel="stylesheet"[^>]*>/g) || []
-        const jsScripts = nextIndexContent.match(/<script[^>]*src="[^"]*"[^>]*><\/script>/g) || []
+        // Fix asset paths to work in extension context
+        nextIndexContent = nextIndexContent
+          .replace(/href="\/_next/g, 'href="app/_next')
+          .replace(/src="\/_next/g, 'src="app/_next')
+          .replace(/href="\/favicon/g, 'href="app/favicon')
+          .replace(/src="\/favicon/g, 'src="app/favicon')
 
-        // Create proper panel.html with extracted assets
-        const improvedPanelHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Recruiting Agent Panel</title>
-  ${cssLinks.map((link) => link.replace(/href="([^"]*)"/, 'href="app/$1"')).join("\n  ")}
+        // Add extension context and styling
+        const extensionScript = `
+  <script>
+    // Extension context detection
+    window.__EXTENSION_CONTEXT__ = {
+      isExtension: true,
+      chrome: !!window.chrome?.extension
+    };
+    
+    // Disable demo mode in extension
+    window.__DISABLE_DEMO_MODE__ = true;
+  </script>
   <style>
     body {
       margin: 0;
       padding: 0;
       height: 100vh;
-      overflow: hidden;
+      overflow: auto;
     }
     #__next {
       height: 100vh;
     }
-  </style>
-</head>
-<body>
-  <div id="__next"></div>
-  
-  <script>
-    // Extension context
-    window.__EXTENSION_CONTEXT__ = {
-      isExtension: true,
-      chrome: !!window.chrome?.extension
-    };
-  </script>
-  
-  ${jsScripts.map((script) => script.replace(/src="([^"]*)"/, 'src="app/$1"')).join("\n  ")}
-</body>
-</html>`
+  </style>`
 
-        await fs.writeFile(path.join(buildDir, "panel.html"), improvedPanelHtml)
+        // Insert the script and styles before closing head tag
+        nextIndexContent = nextIndexContent.replace("</head>", `${extensionScript}\n</head>`)
+
+        await fs.writeFile(path.join(buildDir, "panel.html"), nextIndexContent)
+      } else {
+        throw new Error("Next.js index.html not found in build output")
       }
 
       // Update manifest to include all static assets
