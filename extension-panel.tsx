@@ -60,14 +60,15 @@ export default function Component() {
   const [downloadFeedback, setDownloadFeedback] = useState(false)
 
   useEffect(() => {
+    const isExtension = window.__EXTENSION_CONTEXT__?.isExtension || false
+
     getCurrentTabUrl()
       .then(setActiveTabUrl)
       .catch(() => {
         setActiveTabUrl(window.location.href)
       })
 
-    // Initialize demo mode
-    if (isDemoMode) {
+    if (!isExtension && isDemoMode) {
       setJobDescription(DEMO_JOB_DESCRIPTION)
       setReview(DEMO_RESPONSE)
       setTailoredMarkdown(DEMO_RESPONSE.Tailored_Resume)
@@ -299,7 +300,8 @@ export default function Component() {
                   <span className="text-sm font-medium">Example Job Description</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  This is a demo with a sample job description and resume. Click "View Analysis" to continue demo or clear the text below to exit demo mode.
+                  This is a demo with a sample job description and resume. Click "View Analysis" to continue demo or
+                  clear the text below to exit demo mode.
                 </p>
               </div>
             )}
@@ -356,10 +358,12 @@ export default function Component() {
                     <Badge variant="default" className="text-xs">
                       Demo
                     </Badge>
-                    <span className="text-sm font-medium">Example resume review     </span>
+                    <span className="text-sm font-medium">Example resume review </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Our AI assesses your qualifications against the job's "must-haves" and scores your fit for the job. It also asks you questions in case you &nbsp;have additional qualifications that are not included in your resume.&nbsp;
+                    Our AI assesses your qualifications against the job's "must-haves" and scores your fit for the job.
+                    It also asks you questions in case you &nbsp;have additional qualifications that are not included in
+                    your resume.&nbsp;
                   </p>
                 </div>
               )}
@@ -403,7 +407,9 @@ export default function Component() {
                   <div>
                     <h3 className="font-semibold mb-2">Additional info for AI reviewer</h3>
                     <p className="text-xs text-muted-foreground mb-3">
-                      (Optional) I can provide an even more tailored resume if you can have additional relevant experiences and skills. Leave blank if there is no additional information I should take into consideration.&nbsp;
+                      (Optional) I can provide an even more tailored resume if you can have additional relevant
+                      experiences and skills. Leave blank if there is no additional information I should take into
+                      consideration.&nbsp;
                     </p>
                     <div className="space-y-4">
                       {review.Questions.map((question, index) => (
@@ -504,7 +510,8 @@ export default function Component() {
                   <span className="text-sm font-medium">Example tailored resume</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Our AI suggests a tailored resume for the job. Our suggestions are in redline for you to review. Toggle "Redline" off to see your resume without redline. &nbsp;
+                  Our AI suggests a tailored resume for the job. Our suggestions are in redline for you to review.
+                  Toggle "Redline" off to see your resume without redline. &nbsp;
                 </p>
               </div>
             )}
