@@ -1,7 +1,11 @@
 // Declare chrome variable to fix lint/correctness/noUndeclaredVariables error
 declare const chrome: any
 
-export async function postReview({ jobDescription, url }: { jobDescription: string; url: string }) {
+export async function postReview({
+  jobDescription,
+  url,
+  demo,
+}: { jobDescription: string; url: string; demo?: boolean }) {
   let base: string
 
   try {
@@ -25,9 +29,9 @@ export async function postReview({ jobDescription, url }: { jobDescription: stri
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         job_description: jobDescription,
-        URL: url,
+        url: url,
         save_output: true,
-        demo: false,
+        demo: demo || false,
       }),
       signal: controller.signal,
     })
@@ -87,12 +91,16 @@ export async function postQuestions({
   }
 }
 
-export async function postReviewWithRetry({ jobDescription, url }: { jobDescription: string; url: string }) {
+export async function postReviewWithRetry({
+  jobDescription,
+  url,
+  demo,
+}: { jobDescription: string; url: string; demo?: boolean }) {
   let lastError: Error
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      return await postReview({ jobDescription, url })
+      return await postReview({ jobDescription, url, demo })
     } catch (error) {
       lastError = error as Error
       if (attempt < 2) {
@@ -142,7 +150,7 @@ export async function getCurrentTabUrl(): Promise<string> {
   return window.location.href
 }
 
-export async function getJobDescription({ url }: { url: string }) {
+export async function getJobDescription({ url, demo }: { url: string; demo?: boolean }) {
   let base: string
 
   try {
@@ -165,7 +173,8 @@ export async function getJobDescription({ url }: { url: string }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        URL: url,
+        url: url,
+        demo: demo || false,
       }),
       signal: controller.signal,
     })
