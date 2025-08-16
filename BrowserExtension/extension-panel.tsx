@@ -10,19 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import {
-  FileText,
-  Users,
-  X,
-  CheckCircle,
-  AlertCircle,
-  Linkedin,
-  Loader2,
-  Download,
-  Copy,
-  ClipboardList,
-  Send,
-} from "lucide-react"
+import { FileText, Users, CheckCircle, AlertCircle, Linkedin, Loader2, Download, Copy, Send } from "lucide-react"
 import { postReviewWithRetry, postQuestions, cleanMarkdown, getCurrentTabUrl, getJobDescription } from "@/lib/api"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { Tooltip } from "@/components/tooltip"
@@ -63,6 +51,7 @@ export default function Component() {
   const [showReviewTooltip, setShowReviewTooltip] = useState(true)
   const [showResumeTooltip, setShowResumeTooltip] = useState(true)
   const [showEditingTooltip, setShowEditingTooltip] = useState(true)
+  const [demoState, setDemoState] = useState(true)
 
   useEffect(() => {
     const initializePanel = async () => {
@@ -70,25 +59,18 @@ export default function Component() {
         const url = await getCurrentTabUrl()
         setActiveTabUrl(url)
 
-        // Get job description from URL
-        const jdResponse = await getJobDescription({ url })
-        if (jdResponse?.job_description) {
-          setJobDescription(jdResponse.job_description)
-
-          // Automatically generate review
-          const reviewResponse = await postReviewWithRetry({
-            jobDescription: jdResponse.job_description,
-            url: url,
-          })
-
-          setReview(reviewResponse)
-          setTailoredMarkdown(reviewResponse.Tailored_Resume || "")
+        if (demoState) {
+          console.log("[v0] Demo_State is true, getting demo job description")
+          const jdResponse = await getJobDescription({ url: url, demo: true })
+          if (jdResponse?.job_description) {
+            setJobDescription(jdResponse.job_description)
+            console.log("[v0] Demo job description loaded")
+          }
         }
       } catch (error) {
         console.log("[v0] Failed to initialize panel:", error)
-        setInitError(error instanceof Error ? error.message : "Failed to load job description from this page")
+        setInitError(error instanceof Error ? error.message : "Failed to load demo job description")
 
-        // Fallback to current URL if API calls fail
         try {
           const url = await getCurrentTabUrl()
           setActiveTabUrl(url)
@@ -101,7 +83,7 @@ export default function Component() {
     }
 
     initializePanel()
-  }, [])
+  }, [demoState])
 
   const getFitScoreStyle = (score: number) => {
     if (score >= 9) return "bg-green-800 text-white"
@@ -121,6 +103,7 @@ export default function Component() {
       const result = await postReviewWithRetry({
         jobDescription: jobDescription.trim(),
         url: activeTabUrl,
+        demo: demoState,
       })
 
       setReview(result)
@@ -247,9 +230,6 @@ export default function Component() {
             <p className="text-xs text-muted-foreground">AI-Powered Job Application Helper</p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)}>
-          <X className="w-4 h-4" />
-        </Button>
       </div>
 
       {isInitialLoading ? (
@@ -261,21 +241,17 @@ export default function Component() {
         </div>
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-5 m-4 mb-0">
+          <TabsList className="grid w-full grid-cols-5 m-4 mb-0 justify-center">
             <TabsTrigger value="job-description" className="flex items-center gap-1">
-              <ClipboardList className="w-3 h-3" />
               JD
             </TabsTrigger>
             <TabsTrigger value="review" className="flex items-center gap-1" disabled={!review}>
-              <AlertCircle className="w-3 h-3" />
               Review
             </TabsTrigger>
             <TabsTrigger value="resume" className="flex items-center gap-1" disabled={!tailoredMarkdown}>
-              <FileText className="w-3 h-3" />
               Resume
             </TabsTrigger>
             <TabsTrigger value="cover-letter" className="flex items-center gap-1">
-              <FileText className="w-3 h-3" />
               Letter
             </TabsTrigger>
             <TabsTrigger value="contacts" className="flex items-center gap-1">
@@ -303,8 +279,8 @@ export default function Component() {
               </div>
 
               {showJDTooltip && (
-                <Tooltip title="Example Job Description" onClose={() => setShowJDTooltip(false)}>
-                  This is automatically populated from the job posting page. You can edit it before submitting for
+                <Tooltip title="Auto-extraction of Job Description" onClose={() => setShowJDTooltip(false)}>
+                  I will attempt to extract the job description from the page. You can edit it before submitting for
                   review.
                 </Tooltip>
               )}
@@ -326,7 +302,13 @@ export default function Component() {
                 id="job-description"
                 placeholder="Paste job description here..."
                 value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
+                onChange={(e) => {
+                  setJobDescription(e.target.value)
+                  if (demoState) {
+                    console.log("[v0] User modified job description, setting Demo_State to false")
+                    setDemoState(false)
+                  }
+                }}
                 className="min-h-[200px]"
               />
 
@@ -409,7 +391,7 @@ export default function Component() {
                     </div>
 
                     <div>
-                      <h3 className="font-semibold mb-2">Additional info for AI reviewer</h3>
+                      <p className="font-medium mb-2">Additional info for AI reviewer</p>
                       <p className="text-xs text-muted-foreground mb-3">
                         (Optional) I can provide an even more tailored resume if you can have additional relevant
                         experiences and skills. Leave blank if there is no additional information I should take into
@@ -418,9 +400,9 @@ export default function Component() {
                       <div className="space-y-4">
                         {review.Questions.map((question, index) => (
                           <div key={index} className="space-y-2">
-                            <Label className="text-sm font-medium">
+                            <p className="text-sm">
                               {index + 1}. {question}
-                            </Label>
+                            </p>
                             <Textarea
                               placeholder="Your answer..."
                               value={questionAnswers[index] || ""}
