@@ -115,7 +115,8 @@ def generate_review(job_listing: JobListing):
         with open(OUTPUT_RESUME_FILE, "w") as file:
             file.write(resume)
 
-    return response_json
+    response_dict = json.loads(response_json)
+    return response_dict
 
 
 class URL(BaseModel):
@@ -126,7 +127,6 @@ class URL(BaseModel):
 @app.post("/get_JD")
 def get_job_description_from_URL(url: URL):
     """Fetch the job description from a given URL."""
-    job_description = {"job_description": get_job_description(url.url)}
-    response_json = json.dumps(job_description)
-    return response_json
+    response_dict = {"job_description": get_job_description(url.url)}
+    return response_dict
 

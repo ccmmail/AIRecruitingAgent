@@ -76,7 +76,7 @@ def test_generate_review(HTTP_client, monkeypatch):
         }
     )
     assert response.status_code == 200
-    data_dict = json.loads(response.json())
+    data_dict = response.json()
     assert "Tailored_Resume" in data_dict
     assert check_file_created_recently(OUTPUT_FILE) is True
     assert check_file_created_recently(OUTPUT_RESUME_FILE) is True
@@ -95,7 +95,7 @@ def test_generate_demo_review(HTTP_client, monkeypatch):
         }
     )
     assert response.status_code == 200
-    data_dict = json.loads(response.json())
+    data_dict = response.json()
     assert "Tailored_Resume" in data_dict
     assert "Chung Meng Cheong" in data_dict["Tailored_Resume"]
     assert check_file_created_recently(OUTPUT_FILE) is False
@@ -109,6 +109,6 @@ def test_get_job_description(HTTP_client):
         json={"url": "https://example.com/job"}
     )
     assert response.status_code == 200
-    data_dict = json.loads(response.json())
+    data_dict = response.json()
     assert "Chief Executive Officer" in data_dict["job_description"]
 
