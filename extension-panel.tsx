@@ -73,7 +73,7 @@ export default function Component() {
 
         if (demoState) {
           console.log("[v0] Demo_State is true, getting demo job description")
-          const jdResponse = await getJobDescription({ demo: true })
+          const jdResponse = await getJobDescription({ url: url, demo: true })
           if (jdResponse?.job_description) {
             setJobDescription(jdResponse.job_description)
             console.log("[v0] Demo job description loaded")
