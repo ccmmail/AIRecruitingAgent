@@ -354,7 +354,10 @@ export default function Component() {
 
               {showJDTooltip && (
                 <Tooltip title="Sample Job and Resume" onClose={() => setShowJDTooltip(false)}>
-                    Click "Submit for Review" to see my analysis of the sample job and resume. Paste your job description into the text area below to exit the demo. Reviews can take up to 2 minutes."
+                    Click "Submit for Review" or go to "Review" tab to see my analysis of the sample job below for a previously stored resume. 
+                    <br />
+                    <br />
+                    Paste your own job description into the text area below. Generating a reviews takes up to 2 minutes."
                 </Tooltip>
               )}
 
@@ -432,9 +435,10 @@ export default function Component() {
 
                   {showReviewTooltip && (
                     <Tooltip title="Example resume review" onClose={() => setShowReviewTooltip(false)}>
-                      I assessed and scored your qualifications against the job's "must-haves". 
+                      I assessed and scored your qualifications against the job's "must-haves". See "Resume" tab for a tailored resume you can use.  
                       <br />
-                      I also have some questions for you to find out if you have additional relevant experience not currently listed in your resume. You can still see my current resume suggestions without answering them.
+                      <br />
+                      I have some optional questions to find out if you have other relevant experience not currently listed in your resume. I can use this info to update my review and resume suggestions.
                     </Tooltip>
                   )}
 
