@@ -62,9 +62,12 @@ export default function Component() {
         if (demoState) {
           console.log("[v0] Demo_State is true, getting demo job description")
           const jdResponse = await getJobDescription({ url: url, demo: true })
+          console.log("[v0] API response:", jdResponse)
           if (jdResponse?.job_description) {
             setJobDescription(jdResponse.job_description)
-            console.log("[v0] Demo job description loaded")
+            console.log("[v0] Demo job description loaded:", jdResponse.job_description.substring(0, 100))
+          } else {
+            console.log("[v0] No job description in response")
           }
         }
       } catch (error) {
@@ -99,18 +102,22 @@ export default function Component() {
 
     setIsLoading(true)
     setError(null)
+    setReview(null)
 
     try {
+      console.log("[v0] Sending review request with demo state:", demoState)
       const result = await postReviewWithRetry({
         jobDescription: jobDescription.trim(),
         url: activeTabUrl,
         demo: demoState,
       })
 
+      console.log("[v0] Review response received:", result)
       setReview(result)
       setTailoredMarkdown(result.Tailored_Resume || "")
       setActiveTab("review")
     } catch (err) {
+      console.log("[v0] Review request failed:", err)
       setError(err instanceof Error ? err.message : "Failed to generate review")
     } finally {
       setIsLoading(false)
@@ -218,10 +225,10 @@ export default function Component() {
   }
 
   useEffect(() => {
-    // Force re-render of textarea when jobDescription changes
     const textarea = document.getElementById("job-description") as HTMLTextAreaElement
-    if (textarea && textarea.value !== jobDescription) {
+    if (textarea && jobDescription && textarea.value !== jobDescription) {
       textarea.value = jobDescription
+      console.log("[v0] Textarea updated with job description")
     }
   }, [jobDescription])
 
@@ -239,6 +246,7 @@ export default function Component() {
             <p className="text-xs text-muted-foreground">AI-Powered Job Application Helper</p>
           </div>
         </div>
+        <div className="text-xs bg-gray-100 px-2 py-1 rounded">Demo: {demoState ? "ON" : "OFF"}</div>
       </div>
 
       {isInitialLoading ? (
@@ -344,119 +352,142 @@ export default function Component() {
           </TabsContent>
 
           <TabsContent value="review" className="flex-1 m-0">
-            {review && (
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Badge className={`text-lg px-3 py-1 ${getFitScoreStyle(review.Fit?.score)}`}>
-                      {review.Fit ? `${review.Fit.score}/10` : "Loading..."}
-                    </Badge>
-                    <span className="font-medium text-2xl">Fit</span>
+            <div className="p-4">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Generating review...</p>
                   </div>
-                  <Button size="sm" onClick={() => setActiveTab("resume")} disabled={!tailoredMarkdown}>
-                    See Resume Recommendations
-                  </Button>
                 </div>
-
-                {showReviewTooltip && (
-                  <Tooltip title="Example resume review" onClose={() => setShowReviewTooltip(false)}>
-                    Our AI assesses your qualifications against the job's "must-haves" and scores your fit for the job.
-                    It also asks you questions in case you have additional qualifications that are not included in your
-                    resume.
-                  </Tooltip>
-                )}
-
-                <ScrollArea className="h-[calc(100vh-250px)]">
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="font-semibold mb-2">Rationale</h3>
-                      <p className="text-sm text-muted-foreground">{review.Fit?.rationale || "Loading rationale..."}</p>
+              ) : review ? (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Badge className={`text-lg px-3 py-1 ${getFitScoreStyle(review.Fit?.score || null)}`}>
+                        {review.Fit?.score ? `${review.Fit.score}/10` : "N/A"}
+                      </Badge>
+                      <span className="font-medium text-2xl">Fit</span>
                     </div>
+                    <Button size="sm" onClick={() => setActiveTab("resume")} disabled={!tailoredMarkdown}>
+                      See Resume Recommendations
+                    </Button>
+                  </div>
 
-                    <div>
-                      <h3 className="font-semibold mb-3">Gap Analysis against Job "Must Haves"</h3>
-                      <div className="space-y-3">
-                        {(review.Gap_Map || []).map((gap, index) => (
-                          <Card key={index} className="p-3">
-                            <div className="space-y-2">
-                              <div className="flex items-start justify-between">
-                                <span className="font-medium text-sm">{gap["JD Requirement/Keyword"]}</span>
-                                <Badge variant={gap["Present in Resume?"] === "Y" ? "default" : "secondary"}>
-                                  {gap["Present in Resume?"]}
-                                </Badge>
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                <div>
-                                  <strong>Evidence:</strong> {gap["Where/Evidence"]}
+                  {showReviewTooltip && (
+                    <Tooltip title="Example resume review" onClose={() => setShowReviewTooltip(false)}>
+                      Our AI assesses your qualifications against the job's "must-haves" and scores your fit for the
+                      job. It also asks you questions in case you have additional qualifications that are not included
+                      in your resume.
+                    </Tooltip>
+                  )}
+
+                  <ScrollArea className="h-[calc(100vh-250px)]">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="font-semibold mb-2">Rationale</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {review.Fit?.rationale || "No rationale provided"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <h3 className="font-semibold mb-3">Gap Analysis against Job "Must Haves"</h3>
+                        <div className="space-y-3">
+                          {review.Gap_Map && review.Gap_Map.length > 0 ? (
+                            review.Gap_Map.map((gap, index) => (
+                              <Card key={index} className="p-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-start justify-between">
+                                    <span className="font-medium text-sm">{gap["JD Requirement/Keyword"]}</span>
+                                    <Badge variant={gap["Present in Resume?"] === "Y" ? "default" : "secondary"}>
+                                      {gap["Present in Resume?"]}
+                                    </Badge>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    <div>
+                                      <strong>Evidence:</strong> {gap["Where/Evidence"]}
+                                    </div>
+                                    <div>
+                                      <strong>Suggested Action:</strong> {gap["Gap handling"]}
+                                    </div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <strong>Suggested Action:</strong> {gap["Gap handling"]}
-                                </div>
+                              </Card>
+                            ))
+                          ) : (
+                            <p className="text-sm text-muted-foreground">No gap analysis available</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="font-medium mb-2">Additional info for AI reviewer</p>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          (Optional) I can provide an even more tailored resume if you can have additional relevant
+                          experiences and skills. Leave blank if there is no additional information I should take into
+                          consideration.&nbsp;
+                        </p>
+                        <div className="space-y-4">
+                          {review.Questions && review.Questions.length > 0 ? (
+                            review.Questions.map((question, index) => (
+                              <div key={index} className="space-y-2">
+                                <p className="text-sm">
+                                  {index + 1}. {question}
+                                </p>
+                                <Textarea
+                                  placeholder="Your answer..."
+                                  value={questionAnswers[index] || ""}
+                                  onChange={(e) =>
+                                    setQuestionAnswers((prev) => ({
+                                      ...prev,
+                                      [index]: e.target.value,
+                                    }))
+                                  }
+                                  className="min-h-[60px]"
+                                />
                               </div>
-                            </div>
-                          </Card>
-                        ))}
+                            ))
+                          ) : (
+                            <p className="text-sm text-muted-foreground">No additional questions</p>
+                          )}
+                        </div>
                       </div>
                     </div>
+                  </ScrollArea>
 
-                    <div>
-                      <p className="font-medium mb-2">Additional info for AI reviewer</p>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        (Optional) I can provide an even more tailored resume if you can have additional relevant
-                        experiences and skills. Leave blank if there is no additional information I should take into
-                        consideration.&nbsp;
-                      </p>
-                      <div className="space-y-4">
-                        {(review.Questions || []).map((question, index) => (
-                          <div key={index} className="space-y-2">
-                            <p className="text-sm">
-                              {index + 1}. {question}
-                            </p>
-                            <Textarea
-                              placeholder="Your answer..."
-                              value={questionAnswers[index] || ""}
-                              onChange={(e) =>
-                                setQuestionAnswers((prev) => ({
-                                  ...prev,
-                                  [index]: e.target.value,
-                                }))
-                              }
-                              className="min-h-[60px]"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                  <div className="mt-4 pt-4 border-t">
+                    <Button
+                      onClick={handleSubmitQuestions}
+                      disabled={isSubmittingQuestions || questionsSubmitted}
+                      className="w-full"
+                      variant="secondary"
+                    >
+                      {isSubmittingQuestions ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : questionsSubmitted ? (
+                        <>
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Additional Information Submitted
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Submit additional information
+                        </>
+                      )}
+                    </Button>
                   </div>
-                </ScrollArea>
-
-                <div className="mt-4 pt-4 border-t">
-                  <Button
-                    onClick={handleSubmitQuestions}
-                    disabled={isSubmittingQuestions || questionsSubmitted}
-                    className="w-full"
-                    variant="secondary"
-                  >
-                    {isSubmittingQuestions ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : questionsSubmitted ? (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Additional Information Submitted
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4 mr-2" />
-                        Submit additional information
-                      </>
-                    )}
-                  </Button>
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-32 text-muted-foreground">
+                  <p className="text-sm">Click "Submit for Review" to generate analysis</p>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="resume" className="flex-1 m-0">
