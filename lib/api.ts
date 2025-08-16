@@ -150,18 +150,33 @@ export async function getJobDescription({ url, demo }: { url: string; demo?: boo
     const fullUrl = `${base}/get_JD`
     console.log("[v0] getJobDescription - Full URL:", fullUrl)
 
-    const res = await fetch(fullUrl, {
+    const fetchOptions = {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
       body: JSON.stringify({
         url: url,
         demo: demo || false,
       }),
       signal: controller.signal,
+      mode: "cors" as RequestMode,
+      credentials: "omit" as RequestCredentials,
+    }
+
+    console.log("[v0] getJobDescription - Fetch options:", fetchOptions)
+    console.log("[v0] getJobDescription - Extension context check:", {
+      isExtension: typeof chrome !== "undefined",
+      hasPermissions: typeof chrome !== "undefined" && chrome.permissions,
+      userAgent: navigator.userAgent,
     })
+
+    const res = await fetch(fullUrl, fetchOptions)
 
     clearTimeout(timeoutId)
     console.log("[v0] getJobDescription - Response status:", res.status)
+    console.log("[v0] getJobDescription - Response headers:", Object.fromEntries(res.headers.entries()))
 
     if (!res.ok) {
       const errorText = await res.text()
@@ -174,7 +189,17 @@ export async function getJobDescription({ url, demo }: { url: string; demo?: boo
     return data
   } catch (error) {
     clearTimeout(timeoutId)
-    console.log("[v0] getJobDescription - Fetch error:", error)
+    console.log("[v0] getJobDescription - Fetch error details:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    })
+
+    if (error.name === "TypeError" && error.message.includes("Failed to fetch")) {
+      console.log("[v0] getJobDescription - Likely CORS or network connectivity issue")
+      console.log("[v0] getJobDescription - Check if backend server is running and CORS is configured")
+    }
+
     throw error
   }
 }
