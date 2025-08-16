@@ -11,6 +11,9 @@
   "side_panel": {
     "default_path": "panel.html"
   },
+  "side_panel_options": {
+    "default_width": 500
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

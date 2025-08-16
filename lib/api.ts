@@ -1,5 +1,4 @@
-// Declare chrome variable to fix lint/correctness/noUndeclaredVariables error
-declare const chrome: any
+/// <reference types="chrome"/>
 
 function getBackendUrl(): string {
   // Try to get from window (injected during build)
@@ -22,14 +21,14 @@ export async function postReview({
   const timeoutId = setTimeout(() => controller.abort(), 150000) // 150s timeout
 
   try {
-    const res = await fetch(`${base}/generate/review`, {
+    const res = await fetch(`${base}/review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         job_description: jobDescription,
         url: url,
         save_output: true,
-        demo: true,
+        demo: demo || false,
       }),
       signal: controller.signal,
     })
@@ -40,9 +39,18 @@ export async function postReview({
       throw new Error(`HTTP ${res.status}`)
     }
 
-    return res.json()
-  } catch (error) {
+    const textResponse = await res.text();
+
+    try {
+      // Parse the response text as JSON
+      return JSON.parse(textResponse);
+    } catch (parseError) {
+      console.error("Failed to parse response as JSON:", parseError);
+      throw new Error("Invalid response format from server");
+    }
+  } catch (error: unknown) {
     clearTimeout(timeoutId)
+    console.error("API error:", error instanceof Error ? error.message : String(error))
     throw error
   }
 }
@@ -57,7 +65,7 @@ export async function postQuestions({
   const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
 
   try {
-    const res = await fetch(`${base}/generate/questions`, {
+    const res = await fetch(`${base}/questions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -73,8 +81,9 @@ export async function postQuestions({
     }
 
     return res.json()
-  } catch (error) {
+  } catch (error: unknown) {
     clearTimeout(timeoutId)
+    console.error("API error:", error instanceof Error ? error.message : String(error))
     throw error
   }
 }
@@ -147,7 +156,7 @@ export async function getJobDescription({ url, demo }: { url: string; demo?: boo
   const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
 
   try {
-    const fullUrl = `${base}/get_JD`
+    const fullUrl = `${base}/jobdescription`
     console.log("[v0] getJobDescription - Full URL:", fullUrl)
 
     const fetchOptions = {
@@ -190,9 +199,9 @@ export async function getJobDescription({ url, demo }: { url: string; demo?: boo
   } catch (error) {
     clearTimeout(timeoutId)
     console.log("[v0] getJobDescription - Fetch error details:", {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
+      name: error instanceof Error ? error.name : "Unknown error",
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
     })
 
     if (error.name === "TypeError" && error.message.includes("Failed to fetch")) {
