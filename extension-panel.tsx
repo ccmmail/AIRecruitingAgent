@@ -14,7 +14,6 @@ import { FileText, CheckCircle, AlertCircle, Linkedin, Loader2, Download, Copy, 
 import { postReviewWithRetry, postQuestions, cleanMarkdown, getCurrentTabUrl, getJobDescription } from "@/lib/api"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { Tooltip } from "@/components/tooltip"
-import { chrome } from "chrome"
 
 interface ReviewData {
   Tailored_Resume: string
@@ -53,24 +52,14 @@ export default function Component() {
   const [showResumeTooltip, setShowResumeTooltip] = useState(true)
   const [showEditingTooltip, setShowEditingTooltip] = useState(true)
   const [demoState, setDemoState] = useState(true)
-  const [hasInitialized, setHasInitialized] = useState(false)
-
-  const toggleDemoState = () => {
-    setDemoState(!demoState)
-    console.log("[v0] Demo state toggled to:", !demoState)
-  }
 
   useEffect(() => {
-    if (hasInitialized) return
-
     const initializePanel = async () => {
       try {
         const url = await getCurrentTabUrl()
         setActiveTabUrl(url)
 
-        const isExtensionContext = typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id
-
-        if (demoState && isExtensionContext) {
+        if (demoState) {
           console.log("[v0] Demo_State is true, getting demo job description")
           const jdResponse = await getJobDescription({ url: url, demo: true })
           console.log("[v0] API response:", jdResponse)
@@ -80,11 +69,6 @@ export default function Component() {
           } else {
             console.log("[v0] No job description in response")
           }
-        } else if (demoState && !isExtensionContext) {
-          console.log("[v0] Running in v0 preview, using sample job description")
-          setJobDescription(
-            "Sample job description for Product Manager role. This is a demo showing how the extension works when connected to a backend API.",
-          )
         }
       } catch (error) {
         console.log("[v0] Failed to initialize panel:", error)
@@ -98,12 +82,11 @@ export default function Component() {
         }
       } finally {
         setIsInitialLoading(false)
-        setHasInitialized(true)
       }
     }
 
     initializePanel()
-  }, []) // Remove demoState dependency to prevent re-initialization loops
+  }, [demoState])
 
   const getFitScoreStyle = (score: number | null) => {
     if (score === null) return "bg-gray-200 text-gray-800"
@@ -321,16 +304,7 @@ export default function Component() {
             <p className="text-xs text-muted-foreground">AI-Powered Job Application Helper</p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleDemoState}
-          className={`text-xs px-2 py-1 h-auto ${
-            demoState ? "bg-green-50 border-green-300 text-green-700" : "bg-gray-50 border-gray-300 text-gray-700"
-          }`}
-        >
-          Demo: {demoState ? "ON" : "OFF"}
-        </Button>
+        <div className="text-xs bg-gray-100 px-2 py-1 rounded">Demo: {demoState ? "ON" : "OFF"}</div>
       </div>
 
       {isInitialLoading ? (
@@ -654,8 +628,7 @@ export default function Component() {
               </div>
               <div className="flex items-center justify-center h-32 text-muted-foreground">
                 <p className="text-sm">
-                  I'm working on being able to automatically complete the job application (with a custom cover letter)
-                  for you!
+                  I'm working on being able to automatically complete the job application (with a custom cover letter) for you! 
                 </p>
               </div>
             </div>
@@ -668,10 +641,7 @@ export default function Component() {
                 <span className="text-sm font-medium">Feature coming soon</span>
               </div>
               <div className="flex items-center justify-center h-32 text-muted-foreground">
-                <p className="text-sm">
-                  I'm working on being able to tell you who are your 1st and 2nd degree LinkedIn contacts, to help with
-                  your networking efforts!
-                </p>
+                <p className="text-sm">I'm working on showing you your 1st and 2nd degree LinkedIn contacts to help with your networking efforts!</p>
               </div>
             </div>
           </TabsContent>
