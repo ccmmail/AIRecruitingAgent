@@ -21,7 +21,7 @@ export async function postReview({
   const timeoutId = setTimeout(() => controller.abort(), 150000) // 150s timeout
 
   try {
-    const res = await fetch(`${base}/generate/review`, {
+    const res = await fetch(`${base}/review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -65,7 +65,7 @@ export async function postQuestions({
   const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
 
   try {
-    const res = await fetch(`${base}/generate/questions`, {
+    const res = await fetch(`${base}/questions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -156,7 +156,7 @@ export async function getJobDescription({ url, demo }: { url: string; demo?: boo
   const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
 
   try {
-    const fullUrl = `${base}/get_JD`
+    const fullUrl = `${base}/jobdescription`
     console.log("[v0] getJobDescription - Full URL:", fullUrl)
 
     const fetchOptions = {
