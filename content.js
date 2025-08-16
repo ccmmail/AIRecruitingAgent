@@ -2,8 +2,8 @@
 let panelInjected = false
 let panelVisible = false
 
-// Declare chrome variable
-const chrome = window.chrome
+// Don't declare chrome variable, as it is already a global object in the extension context
+// const chrome = window.chrome
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
