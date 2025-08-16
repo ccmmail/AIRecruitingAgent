@@ -118,9 +118,30 @@ export default function Component() {
       console.log("[v0] Review response received:", result)
       console.log("[v0] Response type:", typeof result)
       console.log("[v0] Response keys:", result ? Object.keys(result) : "null")
-      console.log("[v0] Fit object:", result?.Fit)
-      console.log("[v0] Gap_Map length:", result?.Gap_Map?.length)
-      console.log("[v0] Questions length:", result?.Questions?.length)
+
+      if (result) {
+        console.log("[v0] Fit object exists:", !!result.Fit)
+        console.log("[v0] Fit.score:", result.Fit?.score)
+        console.log("[v0] Fit.rationale length:", result.Fit?.rationale?.length)
+        console.log("[v0] Gap_Map exists:", !!result.Gap_Map)
+        console.log("[v0] Gap_Map is array:", Array.isArray(result.Gap_Map))
+        console.log("[v0] Gap_Map length:", result.Gap_Map?.length)
+        console.log("[v0] Questions exists:", !!result.Questions)
+        console.log("[v0] Questions is array:", Array.isArray(result.Questions))
+        console.log("[v0] Questions length:", result.Questions?.length)
+        console.log("[v0] Tailored_Resume exists:", !!result.Tailored_Resume)
+        console.log("[v0] Tailored_Resume length:", result.Tailored_Resume?.length)
+
+        console.log("[v0] About to set review state with:", {
+          hasFit: !!result.Fit,
+          fitScore: result.Fit?.score,
+          hasGapMap: !!result.Gap_Map,
+          gapMapLength: result.Gap_Map?.length,
+          hasQuestions: !!result.Questions,
+          questionsLength: result.Questions?.length,
+          hasTailoredResume: !!result.Tailored_Resume,
+        })
+      }
 
       if (result && typeof result === "object") {
         if (!result.Fit || typeof result.Fit.score !== "number") {
@@ -133,8 +154,14 @@ export default function Component() {
           console.log("[v0] Warning: Invalid Questions in response")
         }
 
+        console.log("[v0] Setting review state...")
         setReview(result)
-        console.log("[v0] Review state updated successfully")
+
+        setTimeout(() => {
+          console.log("[v0] Review state verification - review exists:", !!result)
+          console.log("[v0] Review state verification - Fit exists:", !!result?.Fit)
+          console.log("[v0] Review state verification - score:", result?.Fit?.score)
+        }, 100)
 
         if (result.Tailored_Resume) {
           setTailoredMarkdown(result.Tailored_Resume)
