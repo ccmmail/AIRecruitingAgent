@@ -326,11 +326,10 @@ export default function Component() {
             <TabsTrigger value="resume" className="flex items-center gap-1" disabled={!tailoredMarkdown}>
               Resume
             </TabsTrigger>
-            <TabsTrigger value="cover-letter" className="flex items-center gap-1">
-              Letter
+            <TabsTrigger value="application" className="flex items-center gap-1">
+              Application
             </TabsTrigger>
             <TabsTrigger value="contacts" className="flex items-center gap-1">
-              <Users className="w-3 h-3" />
               Contacts
             </TabsTrigger>
           </TabsList>
@@ -613,14 +612,14 @@ export default function Component() {
             </div>
           </TabsContent>
 
-          <TabsContent value="cover-letter" className="flex-1 m-0">
+          <TabsContent value="application" className="flex-1 m-0">
             <div className="p-4">
               <div className="flex items-center gap-2 mb-4">
                 <CheckCircle className="w-4 h-4 text-green-500" />
                 <span className="text-sm font-medium">Feature coming soon</span>
               </div>
               <div className="flex items-center justify-center h-32 text-muted-foreground">
-                <p className="text-sm">Cover letter generation will be available in a future update</p>
+                <p className="text-sm">Cover letter generation and auto-application will be available in a future update</p>
               </div>
             </div>
           </TabsContent>
