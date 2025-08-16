@@ -293,7 +293,7 @@ export default function Component() {
   if (!isOpen) return null
 
   return (
-    <div className="fixed right-0 top-0 h-full w-96 bg-background border-l shadow-lg z-50 flex flex-col">
+    <div className="fixed right-0 top-0 h-full w-[500px] bg-background border-l shadow-lg z-50 flex flex-col">
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
@@ -384,7 +384,7 @@ export default function Component() {
                     setDemoState(false)
                   }
                 }}
-                className="min-h-[200px]"
+                className="min-h-[200px] text-sm"
               />
 
               <div>
@@ -440,7 +440,7 @@ export default function Component() {
                     </Tooltip>
                   )}
 
-                  <ScrollArea className="h-[calc(100vh-250px)]">
+                  <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
                     <div className="space-y-6">
                       <div>
                         <h3 className="font-semibold mb-2">Rationale</h3>
@@ -492,7 +492,7 @@ export default function Component() {
                           {review.Questions && review.Questions.length > 0 ? (
                             review.Questions.map((question, index) => (
                               <div key={index} className="space-y-2">
-                                <p className="text-sm">
+                                <p className="text-sm font-normal">
                                   {index + 1}. {question}
                                 </p>
                                 <Textarea
@@ -504,7 +504,7 @@ export default function Component() {
                                       [index]: e.target.value,
                                     }))
                                   }
-                                  className="min-h-[60px]"
+                                  className="min-h-[60px] text-sm"
                                 />
                               </div>
                             ))
@@ -514,9 +514,9 @@ export default function Component() {
                         </div>
                       </div>
                     </div>
-                  </ScrollArea>
+                  </div>
 
-                  <div className="mt-4 pt-4 border-t">
+                  <div className="mt-4 pt-4 border-t bg-background">
                     <Button
                       onClick={handleSubmitQuestions}
                       disabled={isSubmittingQuestions || questionsSubmitted}
@@ -586,9 +586,12 @@ export default function Component() {
               </div>
 
               {showResumeTooltip && (
-                <Tooltip title="Example tailored resume" onClose={() => setShowResumeTooltip(false)}>
-                  Our AI suggests a tailored resume for the job. Our suggestions are in redline for you to review.
-                  Toggle "Redline" off to see your resume without redline.
+                <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
+                  My suggestions are in redline. Hover over red-strikethrough or green text to accept, reject, or edit
+                  changes. Click green text to edit inline.
+                  <br />
+                  <br />
+                  The redline toggle shows/includes or hides/omits redlines for display, copy, and file download.
                 </Tooltip>
               )}
 
