@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { FileText, Users, CheckCircle, AlertCircle, Linkedin, Loader2, Download, Copy, Send } from "lucide-react"
+import { FileText, CheckCircle, AlertCircle, Linkedin, Loader2, Download, Copy, Send } from "lucide-react"
 import { postReviewWithRetry, postQuestions, cleanMarkdown, getCurrentTabUrl, getJobDescription } from "@/lib/api"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { Tooltip } from "@/components/tooltip"
@@ -354,10 +354,11 @@ export default function Component() {
 
               {showJDTooltip && (
                 <Tooltip title="Sample Job and Resume" onClose={() => setShowJDTooltip(false)}>
-                    Click "Submit for Review" or go to "Review" tab to see my analysis of the sample job below for a previously stored resume. 
-                    <br />
-                    <br />
-                    Paste your own job description into the text area below. Generating a reviews takes up to 2 minutes."
+                  Click "Submit for Review" or go to "Review" tab to see my analysis of the sample job below for a
+                  previously stored resume.
+                  <br />
+                  <br />
+                  Paste your own job description into the text area below. Generating a reviews takes up to 2 minutes."
                 </Tooltip>
               )}
 
@@ -435,10 +436,11 @@ export default function Component() {
 
                   {showReviewTooltip && (
                     <Tooltip title="Example resume review" onClose={() => setShowReviewTooltip(false)}>
-                      I assessed and scored your qualifications against the job's "must-haves". See "Resume" tab for a tailored resume you can use.  
+                      I assessed and scored your qualifications against the job's "must-haves". See "Resume" tab for a
+                      tailored resume you can use.
                       <br />
-                      <br />
-                      I have some optional questions to find out if you have other relevant experience not currently listed in your resume. I can use this info to update my review and resume suggestions.
+                      <br />I have some optional questions to find out if you have other relevant experience not
+                      currently listed in your resume. I can use this info to update my review and resume suggestions.
                     </Tooltip>
                   )}
 
@@ -588,8 +590,10 @@ export default function Component() {
 
               {showResumeTooltip && (
                 <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
-                  My suggestions are in redline. Hover over <span className="text-red-600 line-through">red strikethrough</span> or {" "}
-                  <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit changes. Click green text to edit inline.
+                  My suggestions are in redline. Hover over{" "}
+                  <span className="text-red-600 line-through">red strikethrough</span> or{" "}
+                  <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit changes.
+                  Click green text to edit inline.
                   <br />
                   <br />
                   The redline toggle includes or omits redlines for display, copy, and download.
@@ -598,7 +602,7 @@ export default function Component() {
 
               <ScrollArea className="h-[calc(100vh-250px)]">
                 {tailoredMarkdown ? (
-                  <div className="bg-white p-6 text-black">
+                  <div className="bg-white p-6 text-base text-s">
                     <ResumeRenderer
                       markdown={tailoredMarkdown}
                       showRedlines={showRedlines}
@@ -623,7 +627,9 @@ export default function Component() {
                 <span className="text-sm font-medium">Feature coming soon</span>
               </div>
               <div className="flex items-center justify-center h-32 text-muted-foreground">
-                <p className="text-sm">Cover letter generation and auto-application will be available in a future update</p>
+                <p className="text-sm">
+                  Cover letter generation and auto-application will be available in a future update
+                </p>
               </div>
             </div>
           </TabsContent>
