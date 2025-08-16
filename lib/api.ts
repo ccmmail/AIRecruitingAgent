@@ -165,11 +165,17 @@ export async function getJobDescription({ url, demo }: { url: string; demo?: boo
     base = process.env.BACKEND_URL || "http://localhost:8000"
   }
 
+  console.log("[v0] getJobDescription - Backend URL:", base)
+  console.log("[v0] getJobDescription - Request payload:", { url, demo })
+
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
 
   try {
-    const res = await fetch(`${base}/get_JD`, {
+    const fullUrl = `${base}/get_JD`
+    console.log("[v0] getJobDescription - Full URL:", fullUrl)
+
+    const res = await fetch(fullUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -180,14 +186,20 @@ export async function getJobDescription({ url, demo }: { url: string; demo?: boo
     })
 
     clearTimeout(timeoutId)
+    console.log("[v0] getJobDescription - Response status:", res.status)
 
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`)
+      const errorText = await res.text()
+      console.log("[v0] getJobDescription - Error response:", errorText)
+      throw new Error(`HTTP ${res.status}: ${errorText}`)
     }
 
-    return res.json()
+    const data = await res.json()
+    console.log("[v0] getJobDescription - Success response:", data)
+    return data
   } catch (error) {
     clearTimeout(timeoutId)
+    console.log("[v0] getJobDescription - Fetch error:", error)
     throw error
   }
 }
