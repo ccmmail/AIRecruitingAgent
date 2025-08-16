@@ -102,10 +102,13 @@ export default function Component() {
 
     setIsLoading(true)
     setError(null)
-    setReview(null)
+    // setReview(null)
 
     try {
       console.log("[v0] Sending review request with demo state:", demoState)
+      console.log("[v0] Job description length:", jobDescription.trim().length)
+      console.log("[v0] Active tab URL:", activeTabUrl)
+
       const result = await postReviewWithRetry({
         jobDescription: jobDescription.trim(),
         url: activeTabUrl,
@@ -113,9 +116,16 @@ export default function Component() {
       })
 
       console.log("[v0] Review response received:", result)
-      setReview(result)
-      setTailoredMarkdown(result.Tailored_Resume || "")
-      setActiveTab("review")
+
+      if (result && typeof result === "object") {
+        setReview(result)
+        if (result.Tailored_Resume) {
+          setTailoredMarkdown(result.Tailored_Resume)
+        }
+        setActiveTab("review")
+      } else {
+        throw new Error("Invalid response format from server")
+      }
     } catch (err) {
       console.log("[v0] Review request failed:", err)
       setError(err instanceof Error ? err.message : "Failed to generate review")
