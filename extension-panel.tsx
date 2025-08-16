@@ -10,19 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import {
-  FileText,
-  Users,
-  X,
-  CheckCircle,
-  AlertCircle,
-  Linkedin,
-  Loader2,
-  Download,
-  Copy,
-  ClipboardList,
-  Send,
-} from "lucide-react"
+import { FileText, Users, CheckCircle, AlertCircle, Linkedin, Loader2, Download, Copy, Send } from "lucide-react"
 import { postReviewWithRetry, postQuestions, cleanMarkdown, getCurrentTabUrl, getJobDescription } from "@/lib/api"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { Tooltip } from "@/components/tooltip"
@@ -242,9 +230,6 @@ export default function Component() {
             <p className="text-xs text-muted-foreground">AI-Powered Job Application Helper</p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)}>
-          <X className="w-4 h-4" />
-        </Button>
       </div>
 
       {isInitialLoading ? (
@@ -256,21 +241,17 @@ export default function Component() {
         </div>
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-5 m-4 mb-0">
+          <TabsList className="grid w-full grid-cols-5 m-4 mb-0 justify-center">
             <TabsTrigger value="job-description" className="flex items-center gap-1">
-              <ClipboardList className="w-3 h-3" />
               JD
             </TabsTrigger>
             <TabsTrigger value="review" className="flex items-center gap-1" disabled={!review}>
-              <AlertCircle className="w-3 h-3" />
               Review
             </TabsTrigger>
             <TabsTrigger value="resume" className="flex items-center gap-1" disabled={!tailoredMarkdown}>
-              <FileText className="w-3 h-3" />
               Resume
             </TabsTrigger>
             <TabsTrigger value="cover-letter" className="flex items-center gap-1">
-              <FileText className="w-3 h-3" />
               Letter
             </TabsTrigger>
             <TabsTrigger value="contacts" className="flex items-center gap-1">
@@ -299,7 +280,8 @@ export default function Component() {
 
               {showJDTooltip && (
                 <Tooltip title="Auto-extraction of Job Description" onClose={() => setShowJDTooltip(false)}>
-                  I will attempt to extract the job description from the page. You can edit it before submitting for review.
+                  I will attempt to extract the job description from the page. You can edit it before submitting for
+                  review.
                 </Tooltip>
               )}
 
@@ -409,7 +391,7 @@ export default function Component() {
                     </div>
 
                     <div>
-                      <h3 className="font-semibold mb-2">Additional info for AI reviewer</h3>
+                      <p className="font-medium mb-2">Additional info for AI reviewer</p>
                       <p className="text-xs text-muted-foreground mb-3">
                         (Optional) I can provide an even more tailored resume if you can have additional relevant
                         experiences and skills. Leave blank if there is no additional information I should take into
@@ -418,9 +400,9 @@ export default function Component() {
                       <div className="space-y-4">
                         {review.Questions.map((question, index) => (
                           <div key={index} className="space-y-2">
-                            <Label className="text-sm font-medium">
+                            <p className="text-sm">
                               {index + 1}. {question}
-                            </Label>
+                            </p>
                             <Textarea
                               placeholder="Your answer..."
                               value={questionAnswers[index] || ""}
