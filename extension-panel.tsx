@@ -298,9 +298,8 @@ export default function Component() {
               </div>
 
               {showJDTooltip && (
-                <Tooltip title="Example Job Description" onClose={() => setShowJDTooltip(false)}>
-                  This is automatically populated from the job posting page. You can edit it before submitting for
-                  review.
+                <Tooltip title="Auto-extraction of Job Description" onClose={() => setShowJDTooltip(false)}>
+                  I will attempt to extract the job description from the page. You can edit it before submitting for review.
                 </Tooltip>
               )}
 
