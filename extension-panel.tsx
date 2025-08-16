@@ -85,7 +85,8 @@ export default function Component() {
     initializePanel()
   }, [demoState])
 
-  const getFitScoreStyle = (score: number) => {
+  const getFitScoreStyle = (score: number | null) => {
+    if (score === null) return "bg-gray-200 text-gray-800"
     if (score >= 9) return "bg-green-800 text-white"
     if (score >= 7) return "bg-green-200 text-green-800"
     if (score >= 5) return "bg-orange-200 text-orange-800"
@@ -216,6 +217,14 @@ export default function Component() {
     }
   }
 
+  useEffect(() => {
+    // Force re-render of textarea when jobDescription changes
+    const textarea = document.getElementById("job-description") as HTMLTextAreaElement
+    if (textarea && textarea.value !== jobDescription) {
+      textarea.value = jobDescription
+    }
+  }, [jobDescription])
+
   if (!isOpen) return null
 
   return (
@@ -339,8 +348,8 @@ export default function Component() {
               <div className="p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <Badge className={`text-lg px-3 py-1 ${getFitScoreStyle(review.Fit.score)}`}>
-                      {review.Fit.score}/10
+                    <Badge className={`text-lg px-3 py-1 ${getFitScoreStyle(review.Fit?.score)}`}>
+                      {review.Fit ? `${review.Fit.score}/10` : "Loading..."}
                     </Badge>
                     <span className="font-medium text-2xl">Fit</span>
                   </div>
@@ -361,13 +370,13 @@ export default function Component() {
                   <div className="space-y-6">
                     <div>
                       <h3 className="font-semibold mb-2">Rationale</h3>
-                      <p className="text-sm text-muted-foreground">{review.Fit.rationale}</p>
+                      <p className="text-sm text-muted-foreground">{review.Fit?.rationale || "Loading rationale..."}</p>
                     </div>
 
                     <div>
                       <h3 className="font-semibold mb-3">Gap Analysis against Job "Must Haves"</h3>
                       <div className="space-y-3">
-                        {review.Gap_Map.map((gap, index) => (
+                        {(review.Gap_Map || []).map((gap, index) => (
                           <Card key={index} className="p-3">
                             <div className="space-y-2">
                               <div className="flex items-start justify-between">
@@ -398,7 +407,7 @@ export default function Component() {
                         consideration.&nbsp;
                       </p>
                       <div className="space-y-4">
-                        {review.Questions.map((question, index) => (
+                        {(review.Questions || []).map((question, index) => (
                           <div key={index} className="space-y-2">
                             <p className="text-sm">
                               {index + 1}. {question}
