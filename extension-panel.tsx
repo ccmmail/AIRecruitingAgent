@@ -63,6 +63,7 @@ export default function Component() {
   const [showReviewTooltip, setShowReviewTooltip] = useState(true)
   const [showResumeTooltip, setShowResumeTooltip] = useState(true)
   const [showEditingTooltip, setShowEditingTooltip] = useState(true)
+  const [demoState, setDemoState] = useState(true)
 
   useEffect(() => {
     const initializePanel = async () => {
@@ -70,25 +71,18 @@ export default function Component() {
         const url = await getCurrentTabUrl()
         setActiveTabUrl(url)
 
-        // Get job description from URL
-        const jdResponse = await getJobDescription({ url })
-        if (jdResponse?.job_description) {
-          setJobDescription(jdResponse.job_description)
-
-          // Automatically generate review
-          const reviewResponse = await postReviewWithRetry({
-            jobDescription: jdResponse.job_description,
-            url: url,
-          })
-
-          setReview(reviewResponse)
-          setTailoredMarkdown(reviewResponse.Tailored_Resume || "")
+        if (demoState) {
+          console.log("[v0] Demo_State is true, getting demo job description")
+          const jdResponse = await getJobDescription({ demo: true })
+          if (jdResponse?.job_description) {
+            setJobDescription(jdResponse.job_description)
+            console.log("[v0] Demo job description loaded")
+          }
         }
       } catch (error) {
         console.log("[v0] Failed to initialize panel:", error)
-        setInitError(error instanceof Error ? error.message : "Failed to load job description from this page")
+        setInitError(error instanceof Error ? error.message : "Failed to load demo job description")
 
-        // Fallback to current URL if API calls fail
         try {
           const url = await getCurrentTabUrl()
           setActiveTabUrl(url)
@@ -101,7 +95,7 @@ export default function Component() {
     }
 
     initializePanel()
-  }, [])
+  }, [demoState])
 
   const getFitScoreStyle = (score: number) => {
     if (score >= 9) return "bg-green-800 text-white"
@@ -121,6 +115,7 @@ export default function Component() {
       const result = await postReviewWithRetry({
         jobDescription: jobDescription.trim(),
         url: activeTabUrl,
+        demo: demoState,
       })
 
       setReview(result)
@@ -326,7 +321,13 @@ export default function Component() {
                 id="job-description"
                 placeholder="Paste job description here..."
                 value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
+                onChange={(e) => {
+                  setJobDescription(e.target.value)
+                  if (demoState) {
+                    console.log("[v0] User modified job description, setting Demo_State to false")
+                    setDemoState(false)
+                  }
+                }}
                 className="min-h-[200px]"
               />
 
