@@ -102,7 +102,7 @@ export default function Component() {
 
     setIsLoading(true)
     setError(null)
-    // setReview(null)
+    setReview(null)
 
     try {
       console.log("[v0] Sending review request with demo state:", demoState)
@@ -116,14 +116,34 @@ export default function Component() {
       })
 
       console.log("[v0] Review response received:", result)
+      console.log("[v0] Response type:", typeof result)
+      console.log("[v0] Response keys:", result ? Object.keys(result) : "null")
+      console.log("[v0] Fit object:", result?.Fit)
+      console.log("[v0] Gap_Map length:", result?.Gap_Map?.length)
+      console.log("[v0] Questions length:", result?.Questions?.length)
 
       if (result && typeof result === "object") {
+        if (!result.Fit || typeof result.Fit.score !== "number") {
+          console.log("[v0] Warning: Invalid Fit object in response")
+        }
+        if (!result.Gap_Map || !Array.isArray(result.Gap_Map)) {
+          console.log("[v0] Warning: Invalid Gap_Map in response")
+        }
+        if (!result.Questions || !Array.isArray(result.Questions)) {
+          console.log("[v0] Warning: Invalid Questions in response")
+        }
+
         setReview(result)
+        console.log("[v0] Review state updated successfully")
+
         if (result.Tailored_Resume) {
           setTailoredMarkdown(result.Tailored_Resume)
+          console.log("[v0] Tailored resume set, length:", result.Tailored_Resume.length)
         }
         setActiveTab("review")
+        console.log("[v0] Switched to review tab")
       } else {
+        console.log("[v0] Invalid response format:", result)
         throw new Error("Invalid response format from server")
       }
     } catch (err) {
@@ -131,6 +151,7 @@ export default function Component() {
       setError(err instanceof Error ? err.message : "Failed to generate review")
     } finally {
       setIsLoading(false)
+      console.log("[v0] Loading state cleared")
     }
   }
 
@@ -374,8 +395,8 @@ export default function Component() {
                 <>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <Badge className={`text-lg px-3 py-1 ${getFitScoreStyle(review.Fit?.score || null)}`}>
-                        {review.Fit?.score ? `${review.Fit.score}/10` : "N/A"}
+                      <Badge className={`text-lg px-3 py-1 ${getFitScoreStyle(review.Fit?.score ?? null)}`}>
+                        {review.Fit?.score !== undefined ? `${review.Fit.score}/10` : "N/A"}
                       </Badge>
                       <span className="font-medium text-2xl">Fit</span>
                     </div>
@@ -396,9 +417,11 @@ export default function Component() {
                     <div className="space-y-6">
                       <div>
                         <h3 className="font-semibold mb-2">Rationale</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {review.Fit?.rationale || "No rationale provided"}
-                        </p>
+                        {review.Fit?.rationale ? (
+                          <p className="text-sm text-muted-foreground">{review.Fit.rationale}</p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic">Loading rationale...</p>
+                        )}
                       </div>
 
                       <div>
