@@ -1,24 +1,22 @@
 // Declare chrome variable to fix lint/correctness/noUndeclaredVariables error
 declare const chrome: any
 
+function getBackendUrl(): string {
+  // Try to get from window (injected during build)
+  if (typeof window !== "undefined" && (window as any).__BACKEND_URL__) {
+    return (window as any).__BACKEND_URL__
+  }
+  // Fallback to environment variable
+  return process.env.BACKEND_URL || "http://localhost:8000"
+}
+
 export async function postReview({
   jobDescription,
   url,
   demo,
 }: { jobDescription: string; url: string; demo?: boolean }) {
-  let base: string
-
-  try {
-    // Try to get backend URL from chrome storage if available
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      const result = await chrome.storage.sync.get("backendUrl")
-      base = result?.backendUrl || process.env.BACKEND_URL || "http://localhost:8000"
-    } else {
-      base = process.env.BACKEND_URL || "http://localhost:8000"
-    }
-  } catch {
-    base = process.env.BACKEND_URL || "http://localhost:8000"
-  }
+  const base = getBackendUrl()
+  console.log("[v0] postReview - Using backend URL:", base)
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 150000) // 150s timeout
@@ -52,18 +50,8 @@ export async function postReview({
 export async function postQuestions({
   questionsAnswers,
 }: { questionsAnswers: Array<{ Question: string; Answer: string }> }) {
-  let base: string
-
-  try {
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      const result = await chrome.storage.sync.get("backendUrl")
-      base = result?.backendUrl || process.env.BACKEND_URL || "http://localhost:8000"
-    } else {
-      base = process.env.BACKEND_URL || "http://localhost:8000"
-    }
-  } catch {
-    base = process.env.BACKEND_URL || "http://localhost:8000"
-  }
+  const base = getBackendUrl()
+  console.log("[v0] postQuestions - Using backend URL:", base)
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
@@ -151,21 +139,8 @@ export async function getCurrentTabUrl(): Promise<string> {
 }
 
 export async function getJobDescription({ url, demo }: { url: string; demo?: boolean }) {
-  let base: string
-
-  try {
-    // Try to get backend URL from chrome storage if available
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      const result = await chrome.storage.sync.get("backendUrl")
-      base = result?.backendUrl || process.env.BACKEND_URL || "http://localhost:8000"
-    } else {
-      base = process.env.BACKEND_URL || "http://localhost:8000"
-    }
-  } catch {
-    base = process.env.BACKEND_URL || "http://localhost:8000"
-  }
-
-  console.log("[v0] getJobDescription - Backend URL:", base)
+  const base = getBackendUrl()
+  console.log("[v0] getJobDescription - Using backend URL:", base)
   console.log("[v0] getJobDescription - Request payload:", { url, demo })
 
   const controller = new AbortController()

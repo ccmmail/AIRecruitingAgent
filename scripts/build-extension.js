@@ -64,6 +64,8 @@ window.__EXTENSION_CONTEXT__ = {
 
 window.__ENABLE_DEMO_MODE__ = true;
 
+window.__BACKEND_URL__ = "${process.env.BACKEND_URL || "http://localhost:8000"}";
+
 // Next.js inline scripts
 ${inlineScripts.join("\n\n")}
 `
