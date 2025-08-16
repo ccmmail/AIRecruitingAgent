@@ -29,7 +29,7 @@ export async function postReview({
         job_description: jobDescription,
         url: url,
         save_output: true,
-        demo: demo || false,
+        demo: true,
       }),
       signal: controller.signal,
     })
