@@ -10,10 +10,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { FileText, Users, CheckCircle, AlertCircle, Linkedin, Loader2, Download, Copy, Send } from "lucide-react"
+import { FileText, CheckCircle, AlertCircle, Linkedin, Loader2, Download, Copy, Send } from "lucide-react"
 import { postReviewWithRetry, postQuestions, cleanMarkdown, getCurrentTabUrl, getJobDescription } from "@/lib/api"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { Tooltip } from "@/components/tooltip"
+import { chrome } from "chrome"
 
 interface ReviewData {
   Tailored_Resume: string
@@ -52,14 +53,24 @@ export default function Component() {
   const [showResumeTooltip, setShowResumeTooltip] = useState(true)
   const [showEditingTooltip, setShowEditingTooltip] = useState(true)
   const [demoState, setDemoState] = useState(true)
+  const [hasInitialized, setHasInitialized] = useState(false)
+
+  const toggleDemoState = () => {
+    setDemoState(!demoState)
+    console.log("[v0] Demo state toggled to:", !demoState)
+  }
 
   useEffect(() => {
+    if (hasInitialized) return
+
     const initializePanel = async () => {
       try {
         const url = await getCurrentTabUrl()
         setActiveTabUrl(url)
 
-        if (demoState) {
+        const isExtensionContext = typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id
+
+        if (demoState && isExtensionContext) {
           console.log("[v0] Demo_State is true, getting demo job description")
           const jdResponse = await getJobDescription({ url: url, demo: true })
           console.log("[v0] API response:", jdResponse)
@@ -69,6 +80,11 @@ export default function Component() {
           } else {
             console.log("[v0] No job description in response")
           }
+        } else if (demoState && !isExtensionContext) {
+          console.log("[v0] Running in v0 preview, using sample job description")
+          setJobDescription(
+            "Sample job description for Product Manager role. This is a demo showing how the extension works when connected to a backend API.",
+          )
         }
       } catch (error) {
         console.log("[v0] Failed to initialize panel:", error)
@@ -82,11 +98,12 @@ export default function Component() {
         }
       } finally {
         setIsInitialLoading(false)
+        setHasInitialized(true)
       }
     }
 
     initializePanel()
-  }, [demoState])
+  }, []) // Remove demoState dependency to prevent re-initialization loops
 
   const getFitScoreStyle = (score: number | null) => {
     if (score === null) return "bg-gray-200 text-gray-800"
@@ -304,7 +321,16 @@ export default function Component() {
             <p className="text-xs text-muted-foreground">AI-Powered Job Application Helper</p>
           </div>
         </div>
-        <div className="text-xs bg-gray-100 px-2 py-1 rounded">Demo: {demoState ? "ON" : "OFF"}</div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleDemoState}
+          className={`text-xs px-2 py-1 h-auto ${
+            demoState ? "bg-green-50 border-green-300 text-green-700" : "bg-gray-50 border-gray-300 text-gray-700"
+          }`}
+        >
+          Demo: {demoState ? "ON" : "OFF"}
+        </Button>
       </div>
 
       {isInitialLoading ? (
@@ -326,11 +352,10 @@ export default function Component() {
             <TabsTrigger value="resume" className="flex items-center gap-1" disabled={!tailoredMarkdown}>
               Resume
             </TabsTrigger>
-            <TabsTrigger value="cover-letter" className="flex items-center gap-1">
-              Letter
+            <TabsTrigger value="application" className="flex items-center gap-1">
+              Application
             </TabsTrigger>
             <TabsTrigger value="contacts" className="flex items-center gap-1">
-              <Users className="w-3 h-3" />
               Contacts
             </TabsTrigger>
           </TabsList>
@@ -338,7 +363,7 @@ export default function Component() {
           <TabsContent value="job-description" className="flex-1 m-0">
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <Label htmlFor="job-description" className="text-base font-medium">
+                <Label htmlFor="job-description" className="font-medium text-2xl">
                   Job Description
                 </Label>
                 <Button onClick={handleSendToReview} disabled={!jobDescription.trim() || isLoading} size="sm">
@@ -355,7 +380,11 @@ export default function Component() {
 
               {showJDTooltip && (
                 <Tooltip title="Sample Job and Resume" onClose={() => setShowJDTooltip(false)}>
-                    Click "Submit for Review" to see my analysis of the sample job and resume. Paste your job description into the text area below to exit the demo."
+                  Click "Submit for Review" or go to "Review" tab to see my analysis of the sample job below for a
+                  previously stored resume.
+                  <br />
+                  <br />
+                  Paste your own job description into the text area below. Generating a reviews takes up to 2 minutes."
                 </Tooltip>
               )}
 
@@ -383,12 +412,12 @@ export default function Component() {
                     setDemoState(false)
                   }
                 }}
-                className="min-h-[200px] text-sm"
+                className="min-h-[200px] text-s"
               />
 
               <div>
                 <Label htmlFor="url">Page URL</Label>
-                <Input id="url" value={activeTabUrl} readOnly className="mt-2 text-xs" />
+                <Input id="url" value={activeTabUrl} readOnly className="mt-2 text-s" />
               </div>
 
               {error && (
@@ -424,7 +453,7 @@ export default function Component() {
                       <Badge className={`text-lg px-3 py-1 ${getFitScoreStyle(review.Fit?.score ?? null)}`}>
                         {review.Fit?.score !== undefined ? `${review.Fit.score}/10` : "N/A"}
                       </Badge>
-                      <span className="font-medium text-2xl">Fit</span>
+                      <span className="font-medium text-2xl">Job Fit</span>
                     </div>
                     <Button size="sm" onClick={() => setActiveTab("resume")} disabled={!tailoredMarkdown}>
                       See Resume Suggestions
@@ -433,35 +462,39 @@ export default function Component() {
 
                   {showReviewTooltip && (
                     <Tooltip title="Example resume review" onClose={() => setShowReviewTooltip(false)}>
-                      I assessed and scored your qualifications against the job's "must-haves". I also have some questions in case you additional relevant experience not currently stated in your resume. You can still see my resume suggestions without answering them.
+                      I assessed and scored your qualifications against the job's "must-haves". See "Resume" tab for a
+                      tailored resume you can use.
+                      <br />
+                      <br />I have some optional questions to find out if you have other relevant experience not
+                      currently listed in your resume. I can use this info to update my review and resume suggestions.
                     </Tooltip>
                   )}
 
                   <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
                     <div className="space-y-6">
                       <div>
-                        <h3 className="font-semibold mb-2">Rationale</h3>
+                        <h3 className="text-base font-medium">Rationale</h3>
                         {review.Fit?.rationale ? (
-                          <p className="text-sm text-muted-foreground">{review.Fit.rationale}</p>
+                          <p className="text-s text-muted-foreground">{review.Fit.rationale}</p>
                         ) : (
-                          <p className="text-sm text-muted-foreground italic">Loading rationale...</p>
+                          <p className="text-s text-muted-foreground italic">Loading rationale...</p>
                         )}
                       </div>
 
                       <div>
-                        <h3 className="font-semibold mb-3">Gap Analysis against Job "Must Haves"</h3>
+                        <h3 className="text-base font-medium">Gap Analysis against Job "Must Haves"</h3>
                         <div className="space-y-3">
                           {review.Gap_Map && review.Gap_Map.length > 0 ? (
                             review.Gap_Map.map((gap, index) => (
                               <Card key={index} className="p-3">
                                 <div className="space-y-2">
                                   <div className="flex items-start justify-between">
-                                    <span className="font-medium text-sm">{gap["JD Requirement/Keyword"]}</span>
+                                    <span className="font-medium text-s">{gap["JD Requirement/Keyword"]}</span>
                                     <Badge variant={gap["Present in Resume?"] === "Y" ? "default" : "secondary"}>
                                       {gap["Present in Resume?"]}
                                     </Badge>
                                   </div>
-                                  <div className="text-xs text-muted-foreground">
+                                  <div className="text-s text-muted-foreground">
                                     <div>
                                       <strong>Evidence:</strong> {gap["Where/Evidence"]}
                                     </div>
@@ -479,16 +512,16 @@ export default function Component() {
                       </div>
 
                       <div>
-                        <p className="font-medium mb-2">Additional info for AI reviewer</p>
-                        <p className="text-xs text-muted-foreground mb-3">
+                        <p className="text-base font-medium">Additional info for AI reviewer</p>
+                        <p className="text-s text-muted-foreground mb-3">
                           (Optional) I can provide an even more tailored resume if you can have additional relevant
-                          experiences and skills. Feel free to skip them if not relevant.&nbsp;
+                          experiences and skills. Feel free to skip (all) questions if not relevant.&nbsp;
                         </p>
                         <div className="space-y-4">
                           {review.Questions && review.Questions.length > 0 ? (
                             review.Questions.map((question, index) => (
                               <div key={index} className="space-y-2">
-                                <p className="text-sm font-normal">
+                                <p className="text-s font-normal">
                                   {index + 1}. {question}
                                 </p>
                                 <Textarea
@@ -500,12 +533,12 @@ export default function Component() {
                                       [index]: e.target.value,
                                     }))
                                   }
-                                  className="min-h-[60px] text-sm"
+                                  className="min-h-[60px] text-s"
                                 />
                               </div>
                             ))
                           ) : (
-                            <p className="text-sm text-muted-foreground">No additional questions</p>
+                            <p className="text-s text-muted-foreground">No additional questions</p>
                           )}
                         </div>
                       </div>
@@ -583,24 +616,19 @@ export default function Component() {
 
               {showResumeTooltip && (
                 <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
-                  My suggestions are in redline. Hover over red-strikethrough or green text to accept, reject, or edit changes. Click green text to edit inline.
+                  My suggestions are in redline. Hover over{" "}
+                  <span className="text-red-600 line-through">red strikethrough</span> or{" "}
+                  <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit changes.
+                  Click green text to edit inline.
                   <br />
                   <br />
                   The redline toggle includes or omits redlines for display, copy, and download.
                 </Tooltip>
               )}
 
-              {showRedlines && showEditingTooltip && (
-                <Tooltip title="Using the editing functionality" onClose={() => setShowEditingTooltip(false)}>
-                  Hover over <span className="text-red-600 line-through">red strikethrough</span> or{" "}
-                  <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit changes.
-                  Click green text to edit inline.
-                </Tooltip>
-              )}
-
               <ScrollArea className="h-[calc(100vh-250px)]">
                 {tailoredMarkdown ? (
-                  <div className="bg-white p-6 text-black">
+                  <div className="bg-white p-6 text-base text-s">
                     <ResumeRenderer
                       markdown={tailoredMarkdown}
                       showRedlines={showRedlines}
@@ -611,21 +639,24 @@ export default function Component() {
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-32 text-muted-foreground">
-                    <p className="text-sm">No resume recommendations available</p>
+                    <p className="text-s">No resume recommendations available</p>
                   </div>
                 )}
               </ScrollArea>
             </div>
           </TabsContent>
 
-          <TabsContent value="cover-letter" className="flex-1 m-0">
+          <TabsContent value="application" className="flex-1 m-0">
             <div className="p-4">
               <div className="flex items-center gap-2 mb-4">
                 <CheckCircle className="w-4 h-4 text-green-500" />
                 <span className="text-sm font-medium">Feature coming soon</span>
               </div>
               <div className="flex items-center justify-center h-32 text-muted-foreground">
-                <p className="text-sm">Cover letter generation will be available in a future update</p>
+                <p className="text-sm">
+                  I'm working on being able to automatically complete the job application (with a custom cover letter)
+                  for you!
+                </p>
               </div>
             </div>
           </TabsContent>
@@ -637,7 +668,10 @@ export default function Component() {
                 <span className="text-sm font-medium">Feature coming soon</span>
               </div>
               <div className="flex items-center justify-center h-32 text-muted-foreground">
-                <p className="text-sm">LinkedIn contact analysis will be available in a future update</p>
+                <p className="text-sm">
+                  I'm working on being able to tell you who are your 1st and 2nd degree LinkedIn contacts, to help with
+                  your networking efforts!
+                </p>
               </div>
             </div>
           </TabsContent>
