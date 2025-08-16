@@ -52,14 +52,24 @@ export default function Component() {
   const [showResumeTooltip, setShowResumeTooltip] = useState(true)
   const [showEditingTooltip, setShowEditingTooltip] = useState(true)
   const [demoState, setDemoState] = useState(true)
+  const [hasInitialized, setHasInitialized] = useState(false)
+
+  const toggleDemoState = () => {
+    setDemoState(!demoState)
+    console.log("[v0] Demo state toggled to:", !demoState)
+  }
 
   useEffect(() => {
+    if (hasInitialized) return // Prevent re-initialization
+
     const initializePanel = async () => {
       try {
         const url = await getCurrentTabUrl()
         setActiveTabUrl(url)
 
-        if (demoState) {
+        const isPreview = window.location.hostname.includes("vusercontent.net")
+
+        if (demoState && !isPreview) {
           console.log("[v0] Demo_State is true, getting demo job description")
           const jdResponse = await getJobDescription({ url: url, demo: true })
           console.log("[v0] API response:", jdResponse)
@@ -69,6 +79,8 @@ export default function Component() {
           } else {
             console.log("[v0] No job description in response")
           }
+        } else if (isPreview) {
+          console.log("[v0] Skipping API call in preview environment")
         }
       } catch (error) {
         console.log("[v0] Failed to initialize panel:", error)
@@ -82,11 +94,12 @@ export default function Component() {
         }
       } finally {
         setIsInitialLoading(false)
+        setHasInitialized(true) // Mark initialization as complete
       }
     }
 
     initializePanel()
-  }, [demoState])
+  }, []) // Empty dependency array - only run once on mount
 
   const getFitScoreStyle = (score: number | null) => {
     if (score === null) return "bg-gray-200 text-gray-800"
@@ -99,6 +112,12 @@ export default function Component() {
 
   const handleSendToReview = async () => {
     if (!jobDescription.trim()) return
+
+    const isPreview = window.location.hostname.includes("vusercontent.net")
+    if (isPreview) {
+      setError("API calls are not available in preview mode. Please use the actual Chrome extension.")
+      return
+    }
 
     setIsLoading(true)
     setError(null)
@@ -304,7 +323,16 @@ export default function Component() {
             <p className="text-xs text-muted-foreground">AI-Powered Job Application Helper</p>
           </div>
         </div>
-        <div className="text-xs bg-gray-100 px-2 py-1 rounded">Demo: {demoState ? "ON" : "OFF"}</div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleDemoState}
+          className={`text-xs px-2 py-1 h-auto ${
+            demoState ? "bg-green-50 border-green-300 text-green-700" : "bg-gray-50 border-gray-300 text-gray-700"
+          }`}
+        >
+          Demo: {demoState ? "ON" : "OFF"}
+        </Button>
       </div>
 
       {isInitialLoading ? (
@@ -381,7 +409,7 @@ export default function Component() {
                 value={jobDescription}
                 onChange={(e) => {
                   setJobDescription(e.target.value)
-                  if (demoState) {
+                  if (demoState && hasInitialized) {
                     console.log("[v0] User modified job description, setting Demo_State to false")
                     setDemoState(false)
                   }
@@ -628,7 +656,8 @@ export default function Component() {
               </div>
               <div className="flex items-center justify-center h-32 text-muted-foreground">
                 <p className="text-sm">
-                  I'm working on being able to automatically complete the job application (with a custom cover letter) for you! 
+                  I'm working on being able to automatically complete the job application (with a custom cover letter)
+                  for you!
                 </p>
               </div>
             </div>
@@ -641,7 +670,10 @@ export default function Component() {
                 <span className="text-sm font-medium">Feature coming soon</span>
               </div>
               <div className="flex items-center justify-center h-32 text-muted-foreground">
-                <p className="text-sm">I'm working on being able to tell you who are your 1st and 2nd degree LinkedIn contacts, to help with your networking efforts!</p>
+                <p className="text-sm">
+                  I'm working on being able to tell you who are your 1st and 2nd degree LinkedIn contacts, to help with
+                  your networking efforts!
+                </p>
               </div>
             </div>
           </TabsContent>
