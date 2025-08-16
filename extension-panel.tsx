@@ -293,7 +293,7 @@ export default function Component() {
   if (!isOpen) return null
 
   return (
-    <div className="fixed right-0 top-0 h-full w-96 bg-background border-l shadow-lg z-50 flex flex-col">
+    <div className="fixed right-0 top-0 h-full w-[500px] bg-background border-l shadow-lg z-50 flex flex-col">
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
@@ -354,9 +354,8 @@ export default function Component() {
               </div>
 
               {showJDTooltip && (
-                <Tooltip title="Auto-extraction of Job Description" onClose={() => setShowJDTooltip(false)}>
-                  I will attempt to extract the job description from the page. You can edit it before submitting for
-                  review.
+                <Tooltip title="Sample Job and Resume" onClose={() => setShowJDTooltip(false)}>
+                    Click "Submit for Review" to see my analysis of the sample job and resume. Paste your job description into the text area below to exit the demo."
                 </Tooltip>
               )}
 
@@ -384,7 +383,7 @@ export default function Component() {
                     setDemoState(false)
                   }
                 }}
-                className="min-h-[200px]"
+                className="min-h-[200px] text-sm"
               />
 
               <div>
@@ -428,19 +427,17 @@ export default function Component() {
                       <span className="font-medium text-2xl">Fit</span>
                     </div>
                     <Button size="sm" onClick={() => setActiveTab("resume")} disabled={!tailoredMarkdown}>
-                      See Resume Recommendations
+                      See Resume Suggestions
                     </Button>
                   </div>
 
                   {showReviewTooltip && (
                     <Tooltip title="Example resume review" onClose={() => setShowReviewTooltip(false)}>
-                      Our AI assesses your qualifications against the job's "must-haves" and scores your fit for the
-                      job. It also asks you questions in case you have additional qualifications that are not included
-                      in your resume.
+                      I assessed and scored your qualifications against the job's "must-haves". I also have some questions in case you additional relevant experience not currently stated in your resume. You can still see my resume suggestions without answering them.
                     </Tooltip>
                   )}
 
-                  <ScrollArea className="h-[calc(100vh-250px)]">
+                  <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
                     <div className="space-y-6">
                       <div>
                         <h3 className="font-semibold mb-2">Rationale</h3>
@@ -485,14 +482,13 @@ export default function Component() {
                         <p className="font-medium mb-2">Additional info for AI reviewer</p>
                         <p className="text-xs text-muted-foreground mb-3">
                           (Optional) I can provide an even more tailored resume if you can have additional relevant
-                          experiences and skills. Leave blank if there is no additional information I should take into
-                          consideration.&nbsp;
+                          experiences and skills. Feel free to skip them if not relevant.&nbsp;
                         </p>
                         <div className="space-y-4">
                           {review.Questions && review.Questions.length > 0 ? (
                             review.Questions.map((question, index) => (
                               <div key={index} className="space-y-2">
-                                <p className="text-sm">
+                                <p className="text-sm font-normal">
                                   {index + 1}. {question}
                                 </p>
                                 <Textarea
@@ -504,7 +500,7 @@ export default function Component() {
                                       [index]: e.target.value,
                                     }))
                                   }
-                                  className="min-h-[60px]"
+                                  className="min-h-[60px] text-sm"
                                 />
                               </div>
                             ))
@@ -514,9 +510,9 @@ export default function Component() {
                         </div>
                       </div>
                     </div>
-                  </ScrollArea>
+                  </div>
 
-                  <div className="mt-4 pt-4 border-t">
+                  <div className="mt-4 pt-4 border-t bg-background">
                     <Button
                       onClick={handleSubmitQuestions}
                       disabled={isSubmittingQuestions || questionsSubmitted}
@@ -586,9 +582,11 @@ export default function Component() {
               </div>
 
               {showResumeTooltip && (
-                <Tooltip title="Example tailored resume" onClose={() => setShowResumeTooltip(false)}>
-                  Our AI suggests a tailored resume for the job. Our suggestions are in redline for you to review.
-                  Toggle "Redline" off to see your resume without redline.
+                <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
+                  My suggestions are in redline. Hover over red-strikethrough or green text to accept, reject, or edit changes. Click green text to edit inline.
+                  <br />
+                  <br />
+                  The redline toggle includes or omits redlines for display, copy, and download.
                 </Tooltip>
               )}
 
