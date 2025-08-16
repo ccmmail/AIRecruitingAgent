@@ -354,9 +354,8 @@ export default function Component() {
               </div>
 
               {showJDTooltip && (
-                <Tooltip title="Auto-extraction of Job Description" onClose={() => setShowJDTooltip(false)}>
-                  I will attempt to extract the job description from the page. You can edit it before submitting for
-                  review.
+                <Tooltip title="Sample Job and Resume" onClose={() => setShowJDTooltip(false)}>
+                    Click "Submit for Review" to see my analysis of the sample job and resume. Paste your job description into the text area below to exit the demo."
                 </Tooltip>
               )}
 
@@ -428,15 +427,13 @@ export default function Component() {
                       <span className="font-medium text-2xl">Fit</span>
                     </div>
                     <Button size="sm" onClick={() => setActiveTab("resume")} disabled={!tailoredMarkdown}>
-                      See Resume Recommendations
+                      See Resume Suggestions
                     </Button>
                   </div>
 
                   {showReviewTooltip && (
                     <Tooltip title="Example resume review" onClose={() => setShowReviewTooltip(false)}>
-                      Our AI assesses your qualifications against the job's "must-haves" and scores your fit for the
-                      job. It also asks you questions in case you have additional qualifications that are not included
-                      in your resume.
+                      I assessed and scored your qualifications against the job's "must-haves". I also have some questions in case you additional relevant experience not currently stated in your resume. You can still see my resume suggestions without answering them.
                     </Tooltip>
                   )}
 
@@ -485,8 +482,7 @@ export default function Component() {
                         <p className="font-medium mb-2">Additional info for AI reviewer</p>
                         <p className="text-xs text-muted-foreground mb-3">
                           (Optional) I can provide an even more tailored resume if you can have additional relevant
-                          experiences and skills. Leave blank if there is no additional information I should take into
-                          consideration.&nbsp;
+                          experiences and skills. Feel free to skip them if not relevant.&nbsp;
                         </p>
                         <div className="space-y-4">
                           {review.Questions && review.Questions.length > 0 ? (
@@ -587,11 +583,10 @@ export default function Component() {
 
               {showResumeTooltip && (
                 <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
-                  My suggestions are in redline. Hover over red-strikethrough or green text to accept, reject, or edit
-                  changes. Click green text to edit inline.
+                  My suggestions are in redline. Hover over red-strikethrough or green text to accept, reject, or edit changes. Click green text to edit inline.
                   <br />
                   <br />
-                  The redline toggle shows/includes or hides/omits redlines for display, copy, and file download.
+                  The redline toggle includes or omits redlines for display, copy, and download.
                 </Tooltip>
               )}
 
