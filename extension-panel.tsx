@@ -14,6 +14,7 @@ import { FileText, CheckCircle, AlertCircle, Linkedin, Loader2, Download, Copy, 
 import { postReviewWithRetry, postQuestions, cleanMarkdown, getCurrentTabUrl, getJobDescription } from "@/lib/api"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { Tooltip } from "@/components/tooltip"
+import { chrome } from "chrome"
 
 interface ReviewData {
   Tailored_Resume: string
@@ -60,16 +61,16 @@ export default function Component() {
   }
 
   useEffect(() => {
-    if (hasInitialized) return // Prevent re-initialization
+    if (hasInitialized) return
 
     const initializePanel = async () => {
       try {
         const url = await getCurrentTabUrl()
         setActiveTabUrl(url)
 
-        const isPreview = window.location.hostname.includes("vusercontent.net")
+        const isExtensionContext = typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id
 
-        if (demoState && !isPreview) {
+        if (demoState && isExtensionContext) {
           console.log("[v0] Demo_State is true, getting demo job description")
           const jdResponse = await getJobDescription({ url: url, demo: true })
           console.log("[v0] API response:", jdResponse)
@@ -79,8 +80,11 @@ export default function Component() {
           } else {
             console.log("[v0] No job description in response")
           }
-        } else if (isPreview) {
-          console.log("[v0] Skipping API call in preview environment")
+        } else if (demoState && !isExtensionContext) {
+          console.log("[v0] Running in v0 preview, using sample job description")
+          setJobDescription(
+            "Sample job description for Product Manager role. This is a demo showing how the extension works when connected to a backend API.",
+          )
         }
       } catch (error) {
         console.log("[v0] Failed to initialize panel:", error)
@@ -94,12 +98,12 @@ export default function Component() {
         }
       } finally {
         setIsInitialLoading(false)
-        setHasInitialized(true) // Mark initialization as complete
+        setHasInitialized(true)
       }
     }
 
     initializePanel()
-  }, []) // Empty dependency array - only run once on mount
+  }, []) // Remove demoState dependency to prevent re-initialization loops
 
   const getFitScoreStyle = (score: number | null) => {
     if (score === null) return "bg-gray-200 text-gray-800"
@@ -112,12 +116,6 @@ export default function Component() {
 
   const handleSendToReview = async () => {
     if (!jobDescription.trim()) return
-
-    const isPreview = window.location.hostname.includes("vusercontent.net")
-    if (isPreview) {
-      setError("API calls are not available in preview mode. Please use the actual Chrome extension.")
-      return
-    }
 
     setIsLoading(true)
     setError(null)
@@ -409,7 +407,7 @@ export default function Component() {
                 value={jobDescription}
                 onChange={(e) => {
                   setJobDescription(e.target.value)
-                  if (demoState && hasInitialized) {
+                  if (demoState) {
                     console.log("[v0] User modified job description, setting Demo_State to false")
                     setDemoState(false)
                   }
