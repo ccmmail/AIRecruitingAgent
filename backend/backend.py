@@ -58,7 +58,7 @@ def prompt_LLM(prompt: str) -> str:
     return response.choices[0].message.content.strip()
 
 
-def get_job_description(URL: str="") -> str:
+def get_job_description(url: str="") -> str:
     """Return the job description from a given URL."""
     # TODO: Implement logic to fetch job description based on URL
     with open(JOB_DESCRIPTION_DEMO_FILE, "r") as file:
@@ -87,18 +87,18 @@ def create_review_prompt(job_description: str) -> str:
 
 
 class JobListing(BaseModel):
-    """Define the shape of data expected by /generate/resume."""
+    """Define the shape of data expected by /review."""
     job_description: str  # Job description to be reviewed
     url: str  # URL of calling page for tracking purposes
     save_output: bool = False   # if true, save LLM response and markdown resume to files
     demo: bool = False   # if true, return static demo response
 
 
-@app.post("/generate/review")
+@app.post("/review")
 @traceable(name="generate_review_endpoint")
 def generate_review(job_listing: JobListing):
     """Generate a review and tailored resume based on the job listing."""
-    if job_listing.demo is False: # not a demo call
+    if not job_listing.demo: # not a demo call
         prompt = create_review_prompt(job_listing.job_description)
         response_json = prompt_LLM(prompt)
     else: # demo call
@@ -120,13 +120,25 @@ def generate_review(job_listing: JobListing):
 
 
 class URL(BaseModel):
-    """Define the shape of data expected by /getJD."""
+    """Define the shape of data expected by /jobdescription."""
     url: str  # URL of the page requesting the job description
     demo: bool = False   # if true, return static demo response
 
-@app.post("/get_JD")
+@app.post("/jobdescription")
 def get_job_description_from_URL(url: URL):
     """Fetch the job description from a given URL."""
     response_dict = {"job_description": get_job_description(url.url)}
     return response_dict
 
+
+class QuestionAnswers(BaseModel):
+    """Define the shape of data expected by /questions_answers."""
+    question: str  # Question to be answered
+    answer: str  # Answer to the question
+
+
+@app.post("/questions")
+def process_questions_answers(question_answers: QuestionAnswers):
+    """Process questions and answers from a given URL."""
+    # TODO: Implement logic to process questions and answers
+    return

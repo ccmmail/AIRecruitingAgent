@@ -4,7 +4,6 @@ import pytest
 from backend import backend
 from fastapi.testclient import TestClient
 from pathlib import Path
-import json
 import time
 
 # Setup file paths
@@ -67,7 +66,7 @@ def test_generate_review(HTTP_client, monkeypatch):
     with open(TEST_JOB_DESCRIPTION_FILE, "r") as file:
         job_description = file.read()
     response = HTTP_client.post(
-        "/generate/review",
+        "/review",
         json={
             "job_description": job_description,
             "save_output": True,
@@ -86,7 +85,7 @@ def test_generate_review(HTTP_client, monkeypatch):
 def test_generate_demo_review(HTTP_client, monkeypatch):
     """Test /generate/review endpoint returns demo JSON."""
     response = HTTP_client.post(
-        "/generate/review",
+        "/review",
         json={
             "job_description": "fake job description for demo",
             "save_output": True,
@@ -105,7 +104,7 @@ def test_generate_demo_review(HTTP_client, monkeypatch):
 def test_get_job_description(HTTP_client):
     """Test /get_JD endpoint returns job description."""
     response = HTTP_client.post(
-        "/get_JD",
+        "/jobdescription",
         json={"url": "https://example.com/job"}
     )
     assert response.status_code == 200
