@@ -185,15 +185,15 @@ export default function Component() {
   const handleSubmitQuestions = async () => {
     if (!review?.Questions) return
 
-    const questionsAnswers = review.Questions.map((question, index) => ({
-      Question: question,
-      Answer: questionAnswers[index] || "",
+    const qa_pairs = review.Questions.map((question, index) => ({
+      question: question,
+      answer: questionAnswers[index] || "",
     }))
 
     setIsSubmittingQuestions(true)
 
     try {
-      await postQuestions({ questionsAnswers })
+      await postQuestions({ qa_pairs, demo: demoState })
       setQuestionsSubmitted(true)
     } catch (err) {
       console.log("[v0] Failed to submit questions:", err)

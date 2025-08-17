@@ -15,7 +15,7 @@ TEST_ADDITIONAL_EXPERIENCE_FILE = BASE_DIR / "data" / "test_additional_experienc
 TEST_OUTPUT_FROM_LLM_FILE = BASE_DIR / "output" / "test_LLM_response_demo.json"  # use as input for mock LLM response
 OUTPUT_FILE = BASE_DIR.resolve().parent / "output" / "LLM_response.json"
 OUTPUT_RESUME_FILE = BASE_DIR.resolve().parent / "output" / "resume.md"
-
+USER_RESPONSE_FILE = BASE_DIR.resolve().parent / "output" / "user_response.json"
 
 @pytest.fixture
 def HTTP_client():
@@ -111,3 +111,20 @@ def test_get_job_description(HTTP_client):
     data_dict = response.json()
     assert "Chief Executive Officer" in data_dict["job_description"]
 
+
+def test_process_questions_and_answers(HTTP_client):
+    """Test /questions endpoint processes questions and answers."""
+    response = HTTP_client.post(
+        "/questions",
+        json={
+            "qa_pairs": [
+                {"question": "What is your name?", "answer": "John Doe"},
+                {"question": "What is your profession?", "answer": "Software Engineer"}
+            ],
+            "demo": False
+        }
+    )
+    assert response.status_code == 200
+    data_dict = response.json()
+    assert data_dict["status"] == "ok"
+    assert check_file_created_recently(USER_RESPONSE_FILE) is True

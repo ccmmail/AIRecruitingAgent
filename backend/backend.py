@@ -22,6 +22,7 @@ JOB_DESCRIPTION_DEMO_FILE = BASE_DIR / "data" / "job_description_demo.txt"
 OUTPUT_FROM_LLM_FILE = BASE_DIR / "output" / "LLM_response.json"
 OUTPUT_FROM_LLM_DEMO_FILE = BASE_DIR / "output" / "LLM_response_demo.json"
 OUTPUT_RESUME_FILE = BASE_DIR / "output" / "resume.md"
+USER_RESPONSE_FILE = BASE_DIR / "output" / "user_response.json"
 
 
 # Initialize the FastAPI application, OpenAI client, and LangSmith tracer
@@ -56,14 +57,6 @@ def prompt_LLM(prompt: str) -> str:
                   ]
     )
     return response.choices[0].message.content.strip()
-
-
-def get_job_description(url: str="") -> str:
-    """Return the job description from a given URL."""
-    # TODO: Implement logic to fetch job description based on URL
-    with open(JOB_DESCRIPTION_DEMO_FILE, "r") as file:
-        job_description = file.read()
-    return job_description
 
 
 def create_review_prompt(job_description: str) -> str:
@@ -131,14 +124,24 @@ def get_job_description_from_URL(url: URL):
     return response_dict
 
 
+def get_job_description(url: str="") -> str:
+    """Return the job description from a given URL."""
+    # TODO: Implement logic to fetch job description based on URL
+    with open(JOB_DESCRIPTION_DEMO_FILE, "r") as file:
+        job_description = file.read()
+    return job_description
+
+
 class QuestionAnswers(BaseModel):
     """Define the shape of data expected by /questions_answers."""
-    question: str  # Question to be answered
-    answer: str  # Answer to the question
-
+    qa_pairs: list[dict[str, str]]  # list of question-answer pairs
+    demo: bool = False   # if true, return static demo response
 
 @app.post("/questions")
-def process_questions_answers(question_answers: QuestionAnswers):
-    """Process questions and answers from a given URL."""
+def process_questions_and_answers(user_response: QuestionAnswers):
+    """Process questions and answers pairs."""
     # TODO: Implement logic to process questions and answers
-    return
+    user_response_dict = user_response.model_dump().get("qa_pairs")
+    with open(USER_RESPONSE_FILE, "w") as file:
+        json.dump(user_response_dict, file, indent=4)
+    return {"status": "ok"}
