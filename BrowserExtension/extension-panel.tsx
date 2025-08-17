@@ -636,9 +636,9 @@ export default function Component() {
                 <CheckCircle className="w-4 h-4 text-green-500" />
                 <span className="text-sm font-medium">Feature coming soon</span>
               </div>
-              <div className="flex items-center justify-center h-32 text-muted-foreground">
+              <div className="flex items-center justify-center text-muted-foreground h-6">
                 <p className="text-sm">
-                  I'm working on being able to automatically complete the job application (with a custom cover letter) for you! 
+                  To make it easier and quicker to apply to jobs, I'm working on being able fill out the application for you... under your supervision! 
                 </p>
               </div>
             </div>
@@ -650,8 +650,8 @@ export default function Component() {
                 <Linkedin className="w-4 h-4 text-blue-600" />
                 <span className="text-sm font-medium">Feature coming soon</span>
               </div>
-              <div className="flex items-center justify-center h-32 text-muted-foreground">
-                <p className="text-sm">I'm working on being able to tell you who are your 1st and 2nd degree LinkedIn contacts, to help with your networking efforts!</p>
+              <div className="flex items-center justify-center text-muted-foreground h-6">
+                <p className="text-sm">To make it easier to network into this job, I'm working on showing you your 1st and 2nd degree LinkedIn contacts at this company!</p>
               </div>
             </div>
           </TabsContent>
