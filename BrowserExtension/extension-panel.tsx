@@ -340,25 +340,14 @@ export default function Component() {
                 <Label htmlFor="job-description" className="font-medium text-2xl">
                   Job Description
                 </Label>
-                <Button onClick={handleSendToReview} disabled={!jobDescription.trim() || isLoading} size="sm">
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    "Submit for Review"
-                  )}
-                </Button>
               </div>
 
               {showJDTooltip && (
                 <Tooltip title="Sample Job and Resume" onClose={() => setShowJDTooltip(false)}>
-                  Click "Submit for Review" or go to "Review" tab to see my analysis of the sample job below for a
-                  previously stored resume.
+                  As a demo, go to the "Review" tab to see my comments on the job description below for a canned resume.
                   <br />
                   <br />
-                  Paste your own job description into the text area below. Generating a reviews takes up to 2 minutes."
+                  Paste your own job description into the text area below to get a customized review. Generating a review takes up to 2 minutes."
                 </Tooltip>
               )}
 
@@ -394,6 +383,23 @@ export default function Component() {
                 <Input id="url" value={activeTabUrl} readOnly className="mt-2 text-s" />
               </div>
 
+              <div className="mt-4 pt-4 border-t bg-background">
+                <Button
+                  onClick={handleSendToReview}
+                  disabled={!jobDescription.trim() || isLoading}
+                  className="w-full"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    "Submit for Review"
+                  )}
+                </Button>
+              </div>
+
               {error && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                   <p className="text-sm text-red-600">{error}</p>
@@ -422,30 +428,28 @@ export default function Component() {
                 </div>
               ) : review ? (
                 <>
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center mb-4">
                     <div className="flex items-center gap-2">
                       <Badge className={`text-lg px-3 py-1 ${getFitScoreStyle(review.Fit?.score ?? null)}`}>
                         {review.Fit?.score !== undefined ? `${review.Fit.score}/10` : "N/A"}
                       </Badge>
                       <span className="font-medium text-2xl">Job Fit</span>
                     </div>
-                    <Button size="sm" onClick={() => setActiveTab("resume")} disabled={!tailoredMarkdown}>
-                      See Resume Suggestions
-                    </Button>
                   </div>
 
-                  {showReviewTooltip && (
-                    <Tooltip title="Example resume review" onClose={() => setShowReviewTooltip(false)}>
-                      I assessed and scored your qualifications against the job's "must-haves". See "Resume" tab for a
-                      tailored resume you can use.
-                      <br />
-                      <br />I have some optional questions to find out if you have other relevant experience not
-                      currently listed in your resume. I can use this info to update my review and resume suggestions.
-                    </Tooltip>
-                  )}
+                  <ScrollArea className="h-[calc(100vh-200px)]">
+                    <div className="space-y-6 p-4">
 
-                  <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
-                    <div className="space-y-6">
+                    {showReviewTooltip && (
+                      <Tooltip title="Example resume review" onClose={() => setShowReviewTooltip(false)}>
+                        I assessed and scored your qualifications against the job's "must-haves". See "Resume" tab for a
+                        tailored resume you can use.
+                        <br />
+                        <br />I have some optional questions to find out if you have other relevant experience not
+                        currently listed in your resume. I can use this info to update my review and resume suggestions.
+                      </Tooltip>
+                    )}
+
                       <div>
                         <h3 className="text-base font-medium">Rationale</h3>
                         {review.Fit?.rationale ? (
@@ -516,10 +520,8 @@ export default function Component() {
                           )}
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <div className="mt-4 pt-4 border-t bg-background">
+                      <div className="mt-4 pt-4 border-t bg-background">
                     <Button
                       onClick={handleSubmitQuestions}
                       disabled={isSubmittingQuestions || questionsSubmitted}
@@ -544,6 +546,11 @@ export default function Component() {
                       )}
                     </Button>
                   </div>
+
+                    </div>
+                  </ScrollArea>
+
+
                 </>
               ) : (
                 <div className="flex items-center justify-center h-32 text-muted-foreground">
@@ -588,22 +595,24 @@ export default function Component() {
                 </div>
               </div>
 
-              {showResumeTooltip && (
-                <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
-                  My suggestions are in redline. Hover over{" "}
-                  <span className="text-red-600 line-through">red strikethrough</span> or{" "}
-                  <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit changes.
-                  Click green text to edit inline.
-                  <br />
-                  <br />
-                  The redline toggle includes or omits redlines for display, copy, and download.
-                </Tooltip>
-              )}
+              <ScrollArea className="h-[calc(100vh-150px)]">
 
-              <ScrollArea className="h-[calc(100vh-250px)]">
                 {tailoredMarkdown ? (
                   <div className="bg-white p-6 text-base text-s">
-                    <ResumeRenderer
+                     {showResumeTooltip && (
+                    <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
+                      My suggestions are in redline. Hover over{" "}
+                      <span className="text-red-600 line-through">red strikethrough</span> or{" "}
+                      <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit changes.
+                      Click green text to edit inline.
+                      <br />
+                      <br />
+                      The redline toggle includes or omits redlines for display, copy, and download.
+                    </Tooltip>
+                      )}
+
+                <div className="pb-8">
+                 <ResumeRenderer
                       markdown={tailoredMarkdown}
                       showRedlines={showRedlines}
                       onAcceptChange={handleAcceptChange}
@@ -611,6 +620,7 @@ export default function Component() {
                       onEditChange={handleEditChange}
                     />
                   </div>
+                </div>
                 ) : (
                   <div className="flex items-center justify-center h-32 text-muted-foreground">
                     <p className="text-s">No resume recommendations available</p>
