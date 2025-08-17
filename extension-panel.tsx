@@ -650,7 +650,7 @@ export default function Component() {
                 <Linkedin className="w-4 h-4 text-blue-600" />
                 <span className="text-sm font-medium">Feature coming soon</span>
               </div>
-              <div className="flex items-center justify-center h-32 text-muted-foreground">
+              <div className="flex items-center justify-center text-muted-foreground h-6">
                 <p className="text-sm">I'm working on being able to tell you who are your 1st and 2nd degree LinkedIn contacts, to help with your networking efforts!</p>
               </div>
             </div>
