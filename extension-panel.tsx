@@ -651,7 +651,7 @@ export default function Component() {
                 <span className="text-sm font-medium">Feature coming soon</span>
               </div>
               <div className="flex items-center justify-center text-muted-foreground h-6">
-                <p className="text-sm">I'm working on being able to tell you who are your 1st and 2nd degree LinkedIn contacts, to help with your networking efforts!</p>
+                <p className="text-sm">To make it easier to network into this job, I'm working on showing you your 1st and 2nd degree LinkedIn contacts at this company!</p>
               </div>
             </div>
           </TabsContent>
