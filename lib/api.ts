@@ -56,8 +56,12 @@ export async function postReview({
 }
 
 export async function postQuestions({
-  questionsAnswers,
-}: { questionsAnswers: Array<{ Question: string; Answer: string }> }) {
+  qa_pairs,
+  demo,
+}: {
+  qa_pairs: Array<{ question: string; answer: string }>;
+  demo?: boolean;
+}) {
   const base = getBackendUrl()
   console.log("[v0] postQuestions - Using backend URL:", base)
 
@@ -69,7 +73,8 @@ export async function postQuestions({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        Questions_Answers: questionsAnswers,
+        qa_pairs: qa_pairs,
+        demo: demo || false
       }),
       signal: controller.signal,
     })
