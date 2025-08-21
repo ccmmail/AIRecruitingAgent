@@ -138,7 +138,7 @@ def test_process_questions_and_answers_demo(HTTP_client):
     print(data_dict)
 
 
-@pytest.mark.skil()
+@pytest.mark.skip()
 def test_create_resume_diff():
     """Test create_resume_diff creates correct diff output and file."""
     # with open(RESUME_BASELINE, "r") as file:

@@ -1,5 +1,5 @@
-"""Backend API for generating tailored resumes using OpenAI."""
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Nullable
+"""Backend API for generating tailored resumes using OpenAI GPT."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -9,7 +9,7 @@ import os
 from dotenv import load_dotenv
 from langsmith import traceable, Client
 import json
-
+from diff import redline_diff
 
 # Load environment variables from .env file
 load_dotenv()
@@ -32,7 +32,6 @@ USER_RESPONSE_FILE = TEMP_DIR / "user_response.json"
 OUTPUT_FROM_LLM_PRIOR_FILE = TEMP_DIR / "LLM_response_prior.json"
 OUTPUT_FROM_LLM_CURRENT_FILE = TEMP_DIR / "LLM_response_current.json"
 # Demo files
-RESUME_DIFF_DEMO = TEMP_DIR / "resume_diff_demo.txt"
 JOB_DESCRIPTION_DEMO_FILE = TEMP_DIR / "job_description_demo.txt"
 RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = TEMP_DIR / "API_response_review_add_info_demo.json"
 RESPONSE_REVIEW_DEMO_FILE = TEMP_DIR / "API_response_review_demo.json"
@@ -104,22 +103,33 @@ class JobListing(BaseModel):
 def generate_review(job_listing: JobListing):
     """Generate a review and tailored resume based on the job listing."""
     if job_listing.demo:
+        # returned stubbed API response
         with open(RESPONSE_REVIEW_DEMO_FILE, "r") as file:
             response_json = file.read()
             response = json.loads(response_json)
         return response
 
     prompt = create_review_prompt(job_listing.job_description)
-    response_json = prompt_LLM(prompt)
+    LLM_response_json = prompt_LLM(prompt)
+    response = json.loads(LLM_response_json)
 
-    # rotate the output files to keep the last two responses
+    # rotate the files to keep the last two LLM responses
     try:
         os.replace(OUTPUT_FROM_LLM_CURRENT_FILE, OUTPUT_FROM_LLM_PRIOR_FILE)
     finally:
         with open(OUTPUT_FROM_LLM_CURRENT_FILE, "w") as file:
-            file.write(response_json)
+            file.write(LLM_response_json)
 
-    response = json.loads(response_json)
+    revised_resume = response["Tailored_Resume"]
+    # update the resume_revised file with the one from the response
+    with open(RESUME_REVISED, "w") as file:
+        file.write(revised_resume)
+    # diff the baseline and revised resumes, and save the diff in the API response
+    with open(RESUME_BASELINE, "r") as file:
+        baseline = file.read()
+    diff = create_resume_diff(baseline, revised_resume)
+    response["Tailored_Resume"] = diff
+
     return response
 
 
@@ -141,23 +151,9 @@ def get_job_description_from_URL(url: URL):
 
 
 @traceable(name="create_resume_diff")
-def create_resume_diff(baseline:str, revised:str, demo=False) -> str:
-    """Create a diff between two resume versions."""
-    # TODO: replace with deterministic diff logic vs LLM
-    if demo:
-        with open(RESUME_DIFF_DEMO, "r") as file:
-            diff = file.read()
-        return diff
-
-    with open(PROMPT_DIFF, "r") as file:
-        prompt = file.read()
-    prompt = prompt.replace("{{BASELINE}}", baseline)
-    prompt = prompt.replace("{{REVISED}}", revised)
-    response_json = prompt_LLM(prompt)
-    diff = json.loads(response_json).get("diff")
-    with open(RESUME_DIFF, "w") as file:
-        file.write(diff)
-
+def create_resume_diff(baseline:str, revised:str) -> str:
+    """Create a redlined diff between two resume versions."""
+    diff = redline_diff(baseline, revised)
     return diff
 
 
@@ -170,19 +166,20 @@ class QuestionAnswers(BaseModel):
 @app.post("/questions")
 def process_questions_and_answers(user_response: QuestionAnswers):
     """Save user response and revise review with the additional information."""
-    if user_response.demo:
-        with open(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE, "r") as file:
-            response_json = file.read()
-            response = json.loads(response_json)
-        return response
+    demo = user_response.demo
+    # if demo:
+    #     with open(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE, "r") as file:
+    #         response_json = file.read()
+    #         response = json.loads(response_json)
+    #     return response
 
-    user_response_dict = user_response.qa_pairs
     # Save user response to a file
+    user_response_dict = user_response.qa_pairs
     with open(USER_RESPONSE_FILE, "w") as file:
         json.dump(user_response_dict, file, indent=4)
 
     # Assemble API response
-    # TODO: implement logic to re-process review as opposed to canned response
+    # TODO: change this to call update review_review
     with open(OUTPUT_FROM_LLM_PRIOR_FILE, "r") as file:
         response_prior = json.loads(file.read())
     response: dict = {
@@ -194,7 +191,7 @@ def process_questions_and_answers(user_response: QuestionAnswers):
         baseline = file.read()
     with open(RESUME_REVISED, "r") as file:
         revised = file.read()
-    response["Tailored_Resume"] = create_resume_diff(baseline, revised, demo)
+    response["Tailored_Resume"] = create_resume_diff(baseline, revised)
 
     with open(OUTPUT_FROM_LLM_CURRENT_FILE, "w") as file:
         file.write(json.dumps(response, indent=4))
