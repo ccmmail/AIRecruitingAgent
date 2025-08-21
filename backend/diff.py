@@ -66,3 +66,4 @@ def redline_diff(baseline: str, revised: str) -> str:
             if ins_text:
                 out.append(wrap_add(ins_text))
     return "".join(out)
+
