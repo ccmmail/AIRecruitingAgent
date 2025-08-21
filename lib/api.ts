@@ -85,7 +85,15 @@ export async function postQuestions({
       throw new Error(`HTTP ${res.status}`)
     }
 
-    return res.json()
+    const textResponse = await res.text();
+
+    try {
+      // Parse the response text as JSON
+      return JSON.parse(textResponse);
+    } catch (parseError) {
+      console.error("Failed to parse response as JSON:", parseError);
+      throw new Error("Invalid response format from server");
+    }
   } catch (error: unknown) {
     clearTimeout(timeoutId)
     console.error("API error:", error instanceof Error ? error.message : String(error))

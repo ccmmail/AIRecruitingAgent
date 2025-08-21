@@ -97,25 +97,14 @@ export default function Component() {
     return "bg-red-800 text-white"
   }
 
-  const handleSendToReview = async () => {
-    if (!jobDescription.trim()) return
-
-    setIsLoading(true)
+  // Helper function to process API response and update UI
+  const handleApiResponse = async (apiCall: Promise<any>) => {
     setError(null)
-    setReview(null)
 
     try {
-      console.log("[v0] Sending review request with demo state:", demoState)
-      console.log("[v0] Job description length:", jobDescription.trim().length)
-      console.log("[v0] Active tab URL:", activeTabUrl)
+      const result = await apiCall
 
-      const result = await postReviewWithRetry({
-        jobDescription: jobDescription.trim(),
-        url: activeTabUrl,
-        demo: demoState,
-      })
-
-      console.log("[v0] Review response received:", result)
+      console.log("[v0] API response received:", result)
       console.log("[v0] Response type:", typeof result)
       console.log("[v0] Response keys:", result ? Object.keys(result) : "null")
 
@@ -131,16 +120,6 @@ export default function Component() {
         console.log("[v0] Questions length:", result.Questions?.length)
         console.log("[v0] Tailored_Resume exists:", !!result.Tailored_Resume)
         console.log("[v0] Tailored_Resume length:", result.Tailored_Resume?.length)
-
-        console.log("[v0] About to set review state with:", {
-          hasFit: !!result.Fit,
-          fitScore: result.Fit?.score,
-          hasGapMap: !!result.Gap_Map,
-          gapMapLength: result.Gap_Map?.length,
-          hasQuestions: !!result.Questions,
-          questionsLength: result.Questions?.length,
-          hasTailoredResume: !!result.Tailored_Resume,
-        })
       }
 
       if (result && typeof result === "object") {
@@ -173,6 +152,34 @@ export default function Component() {
         console.log("[v0] Invalid response format:", result)
         throw new Error("Invalid response format from server")
       }
+
+      return result
+    } catch (err) {
+      console.log("[v0] API request failed:", err)
+      setError(err instanceof Error ? err.message : "Failed to process response")
+      return null
+    }
+  }
+
+  const handleSendToReview = async () => {
+    if (!jobDescription.trim()) return
+
+    setIsLoading(true)
+    setError(null)
+    setReview(null)
+
+    try {
+      console.log("[v0] Sending review request with demo state:", demoState)
+      console.log("[v0] Job description length:", jobDescription.trim().length)
+      console.log("[v0] Active tab URL:", activeTabUrl)
+
+      await handleApiResponse(
+        postReviewWithRetry({
+          jobDescription: jobDescription.trim(),
+          url: activeTabUrl,
+          demo: demoState,
+        })
+      )
     } catch (err) {
       console.log("[v0] Review request failed:", err)
       setError(err instanceof Error ? err.message : "Failed to generate review")
@@ -191,12 +198,22 @@ export default function Component() {
     }))
 
     setIsSubmittingQuestions(true)
+    setError(null)
 
     try {
-      await postQuestions({ qa_pairs, demo: demoState })
-      setQuestionsSubmitted(true)
+      const result = await handleApiResponse(
+        postQuestions({
+          qa_pairs,
+          demo: demoState
+        })
+      )
+
+      if (result) {
+        setQuestionsSubmitted(true)
+      }
     } catch (err) {
       console.log("[v0] Failed to submit questions:", err)
+      // Error already set by handleApiResponse
     } finally {
       setIsSubmittingQuestions(false)
     }
