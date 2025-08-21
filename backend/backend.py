@@ -1,4 +1,4 @@
-"""Backend API for generating tailored resumes using OpenAI GPT."""
+"""API for generating a resume review and changes tailored to a given job description."""
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -150,7 +150,6 @@ def get_job_description_from_URL(url: URL):
     return response
 
 
-@traceable(name="create_resume_diff")
 def create_resume_diff(baseline:str, revised:str) -> str:
     """Create a redlined diff between two resume versions."""
     diff = redline_diff(baseline, revised)
@@ -165,7 +164,7 @@ class QuestionAnswers(BaseModel):
 
 @app.post("/questions")
 def process_questions_and_answers(user_response: QuestionAnswers):
-    """Save user response and revise review with the additional information."""
+    """Save user response and update review with the additional information."""
     demo = user_response.demo
     # if demo:
     #     with open(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE, "r") as file:
