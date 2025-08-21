@@ -9,7 +9,7 @@ import os
 from dotenv import load_dotenv
 from langsmith import traceable, Client
 import json
-from diff import redline_diff
+from .diff import redline_diff
 
 # Load environment variables from .env file
 load_dotenv()
@@ -70,6 +70,36 @@ def prompt_LLM(prompt: str) -> str:
     return response.choices[0].message.content.strip()
 
 
+def create_resume_diff(baseline:str, revised:str) -> str:
+    """Create a redlined diff between two resume versions."""
+    diff = redline_diff(baseline, revised)
+    return diff
+
+
+class URL(BaseModel):
+    """Define the shape of data expected by /jobdescription."""
+    url: str  # URL of the page requesting the job description
+    demo: bool = False   # if true, return static demo response
+
+
+@app.post("/jobdescription")
+def get_job_description_from_URL(url:URL):
+    """Fetch job description from a given URL."""
+    # TODO: Implement logic to fetch job description based on URL vs. canned response
+    with open(JOB_DESCRIPTION_DEMO_FILE, "r") as file:
+        job_description = file.read()
+    response = {"job_description": job_description}
+    return response
+
+
+class JobListing(BaseModel):
+    """Define the shape of data expected by /review."""
+    job_description: str  # Job description to be reviewed
+    url: str  # URL of calling page for tracking purposes
+    save_output: bool = False   # if true, save LLM response and markdown resume to files
+    demo: bool = False   # if true, return static demo response
+
+
 def create_review_prompt(job_description: str) -> str:
     """Replace placeholders in prompt template to create final prompt."""
     # read prompt template
@@ -90,18 +120,21 @@ def create_review_prompt(job_description: str) -> str:
     return prompt
 
 
-class JobListing(BaseModel):
-    """Define the shape of data expected by /review."""
-    job_description: str  # Job description to be reviewed
-    url: str  # URL of calling page for tracking purposes
-    save_output: bool = False   # if true, save LLM response and markdown resume to files
-    demo: bool = False   # if true, return static demo response
-
-
 @app.post("/review")
 @traceable(name="generate_review_endpoint")
 def generate_review(job_listing: JobListing):
-    """Generate a review and tailored resume based on the job listing."""
+    """Generate a review and tailored resume based on the job description.
+
+    Algo:
+    1. If demo is true, return canned response
+    2. Add qa_pairs, fit score, gap_map to JobListing Object
+    3. Pass JobListing Object to create_review_prompt
+    4. Call prompt_LLM with the prompt
+    5. Save the response to OUTPUT_FROM_LLM_CURRENT_FILE
+    6. Save the revised resume to RESUME_REVISED
+    7. Diff the baseline and revised resumes, and save the diff in the API response
+    8. Return the response
+    """
     if job_listing.demo:
         # returned stubbed API response
         with open(RESPONSE_REVIEW_DEMO_FILE, "r") as file:
@@ -131,29 +164,6 @@ def generate_review(job_listing: JobListing):
     response["Tailored_Resume"] = diff
 
     return response
-
-
-class URL(BaseModel):
-    """Define the shape of data expected by /jobdescription."""
-    url: str  # URL of the page requesting the job description
-    demo: bool = False   # if true, return static demo response
-
-
-@app.post("/jobdescription")
-def get_job_description_from_URL(url: URL):
-    """Fetch the job description from a given URL."""
-    # TODO: Implement logic to fetch job description based on URL vs. canned response
-    # STUBBED WITH CANNED RESPONSE
-    with open(JOB_DESCRIPTION_DEMO_FILE, "r") as file:
-        job_description = file.read()
-    response = {"job_description": job_description}
-    return response
-
-
-def create_resume_diff(baseline:str, revised:str) -> str:
-    """Create a redlined diff between two resume versions."""
-    diff = redline_diff(baseline, revised)
-    return diff
 
 
 class QuestionAnswers(BaseModel):

@@ -1,7 +1,7 @@
 """Unit tests for the backend module."""
 
 import pytest
-from backend import backend
+from backend import api
 from fastapi.testclient import TestClient
 from pathlib import Path
 import time
@@ -30,7 +30,7 @@ TEST_OUTPUT_FROM_LLM_FILE = BASE_DIR / "temp" / "test_LLM_response.json"
 @pytest.fixture
 def HTTP_client():
     """Create a test client for the FastAPI app."""
-    return TestClient(backend.app)
+    return TestClient(api.app)
 
 
 def check_file_created_recently(file_path: Path) -> bool:
@@ -48,10 +48,10 @@ def test_create_review_prompt(monkeypatch):
     resume = "This is a test resume"
     additional_experience = "This is a test additional experience"
 
-    monkeypatch.setattr(backend, "PROMPT_RESUME_REVIEW_FILE", TEST_PROMPT_RESUME_REVIEW_FILE)
-    monkeypatch.setattr(backend, "RESUME_FILE", TEST_RESUME_FILE)
-    monkeypatch.setattr(backend, "ADDITIONAL_EXPERIENCE_FILE", TEST_ADDITIONAL_EXPERIENCE_FILE)
-    prompt = backend.create_review_prompt(job_description)
+    monkeypatch.setattr(api, "PROMPT_RESUME_REVIEW_FILE", TEST_PROMPT_RESUME_REVIEW_FILE)
+    monkeypatch.setattr(api, "RESUME_FILE", TEST_RESUME_FILE)
+    monkeypatch.setattr(api, "ADDITIONAL_EXPERIENCE_FILE", TEST_ADDITIONAL_EXPERIENCE_FILE)
+    prompt = api.create_review_prompt(job_description)
 
     assert "{{JOB_DESCRIPTION}}" not in prompt
     assert "{{RESUME}}" not in prompt
@@ -68,7 +68,7 @@ def test_generate_review(HTTP_client, monkeypatch):
         with open(TEST_OUTPUT_FROM_LLM_FILE, "r") as file:
             mock_LLM_response = file.read()
         return mock_LLM_response
-    monkeypatch.setattr(backend, "prompt_LLM", mock_prompt_LLM)
+    monkeypatch.setattr(api, "prompt_LLM", mock_prompt_LLM)
 
     with open(TEST_JOB_DESCRIPTION_FILE, "r") as file:
         job_description = file.read()
@@ -138,19 +138,13 @@ def test_process_questions_and_answers_demo(HTTP_client):
     print(data_dict)
 
 
-@pytest.mark.skip()
 def test_create_resume_diff():
     """Test create_resume_diff creates correct diff output and file."""
-    # with open(RESUME_BASELINE, "r") as file:
-    #     baseline = file.read()
-    # with open(RESUME_REVISED, "r") as file:
-    #     revised = file.read()
-
     baseline = "This is a text\nThis is a text on a new line"
     revised = "This is a short text\nThis is gibberish on a new line"
-    expected_diff = '''This is a <span style="color:#008000"><add>short </add></span>text
-This is<span style="color:#c00000"><del> a text</del></span><span style="color:#008000"><add> gibberish</add></span> on a new line'''
-    actual_diff = backend.create_resume_diff(baseline, revised, demo=False)
-    # assert actual_diff == expected_diff
+    expected_diff = '''This is a<span style="color:#008000"><add> short</add></span> text
+This is <span style="color:#c00000"><del>a text</del></span><span style="color:#008000"><add>gibberish</add></span> on a new line'''
+    actual_diff = api.create_resume_diff(baseline, revised)
+    assert actual_diff == expected_diff
 
 
