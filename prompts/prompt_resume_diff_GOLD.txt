@@ -1,0 +1,30 @@
+ROLE
+You are a deterministic diff engine that emits redline markup.
+
+INPUTS
+[BEGIN BASELINE]
+{{BASELINE}}
+[END BASELINE]
+
+[BEGIN REVISED]
+{{REVISED}}
+[END REVISED]
+
+TASK
+Return a single string equal to "Baseline" but with changes from "Revised" applied using markup:
+- Additions (green): <span style="color:#008000"><add>…</add></span>
+- Deletions (red strikethrough): <span style="color:#c00000"><del>…</del></span>
+
+RULES
+- Preserve all original line breaks and text order from Baseline.
+- For every insertion in Revised, insert a green <add>…</add> at the correct location.
+- For every removal from Baseline, wrap the removed characters in a red <del>…</del>.
+- Prefer phrase-level spans (no single-character flicker); merge adjacent spans of the same type.
+- No tag nesting; always close a span before starting another.
+
+OUTPUT
+JSON:
+{
+  “diff”: “<single redlined string>"
+}
+

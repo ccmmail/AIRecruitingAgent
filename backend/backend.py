@@ -10,19 +10,32 @@ from dotenv import load_dotenv
 from langsmith import traceable, Client
 import json
 
+
 # Load environment variables from .env file
 load_dotenv()
-
-# Define the base directory and paths for prompts and data files
+# Define the directory paths for working files
 BASE_DIR = Path(__file__).resolve().parent.parent
-PROMPT_RESUME_REVIEW_FILE = BASE_DIR / "prompts" / "prompt_resume_review_GOLD.txt"
-RESUME_FILE = BASE_DIR / "data" / "resume.txt"
-ADDITIONAL_EXPERIENCE_FILE = BASE_DIR / "data" / "additional_experience.txt"
-JOB_DESCRIPTION_DEMO_FILE = BASE_DIR / "data" / "job_description_demo.txt"
-OUTPUT_FROM_LLM_FILE = BASE_DIR / "output" / "LLM_response.json"
-OUTPUT_FROM_LLM_DEMO_FILE = BASE_DIR / "output" / "LLM_response_demo.json"
-OUTPUT_RESUME_FILE = BASE_DIR / "output" / "resume.md"
-USER_RESPONSE_FILE = BASE_DIR / "output" / "user_response.json"
+USER_DIR = BASE_DIR / "user"
+PROMPT_DIR = BASE_DIR / "prompts"
+TEMP_DIR = BASE_DIR / "temp"
+# User data
+RESUME_FILE = USER_DIR / "resume.txt"
+ADDITIONAL_EXPERIENCE_FILE = USER_DIR / "additional_candidate_info.txt"
+# Prompt templates
+PROMPT_RESUME_REVIEW_FILE = PROMPT_DIR / "prompt_resume_review_GOLD.txt"
+PROMPT_DIFF = PROMPT_DIR / "prompt_resume_diff_GOLD.txt"
+# Temp working files
+RESUME_DIFF = TEMP_DIR / "resume_diff.txt"
+RESUME_BASELINE = TEMP_DIR / "resume_baseline.txt"
+RESUME_REVISED = TEMP_DIR / "resume_revised.txt"
+USER_RESPONSE_FILE = TEMP_DIR / "user_response.json"
+OUTPUT_FROM_LLM_PRIOR_FILE = TEMP_DIR / "LLM_response_prior.json"
+OUTPUT_FROM_LLM_CURRENT_FILE = TEMP_DIR / "LLM_response_current.json"
+# Demo files
+RESUME_DIFF_DEMO = TEMP_DIR / "resume_diff_demo.txt"
+JOB_DESCRIPTION_DEMO_FILE = TEMP_DIR / "job_description_demo.txt"
+RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = TEMP_DIR / "API_response_review_add_info_demo.json"
+RESPONSE_REVIEW_DEMO_FILE = TEMP_DIR / "API_response_review_demo.json"
 
 
 # Initialize the FastAPI application, OpenAI client, and LangSmith tracer
@@ -44,7 +57,6 @@ langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
 def show_heartbeat():
     """Return a message to show API is up."""
     return {"message": "Hello World"}
-
 
 @traceable(name="prompt_LLM")
 def prompt_LLM(prompt: str) -> str:
@@ -91,25 +103,24 @@ class JobListing(BaseModel):
 @traceable(name="generate_review_endpoint")
 def generate_review(job_listing: JobListing):
     """Generate a review and tailored resume based on the job listing."""
-    if not job_listing.demo: # not a demo call
-        prompt = create_review_prompt(job_listing.job_description)
-        response_json = prompt_LLM(prompt)
-    else: # demo call
-        with open(OUTPUT_FROM_LLM_DEMO_FILE, "r") as file:
+    if job_listing.demo:
+        with open(RESPONSE_REVIEW_DEMO_FILE, "r") as file:
             response_json = file.read()
+            response = json.loads(response_json)
+        return response
 
-    if job_listing.save_output and job_listing.demo is False:
-        # Save the response to a file
-        with open(OUTPUT_FROM_LLM_FILE, "w") as file:
+    prompt = create_review_prompt(job_listing.job_description)
+    response_json = prompt_LLM(prompt)
+
+    # rotate the output files to keep the last two responses
+    try:
+        os.replace(OUTPUT_FROM_LLM_CURRENT_FILE, OUTPUT_FROM_LLM_PRIOR_FILE)
+    finally:
+        with open(OUTPUT_FROM_LLM_CURRENT_FILE, "w") as file:
             file.write(response_json)
-        # Save the resume markdown to a file
-        response_dict = json.loads(response_json)
-        resume = response_dict.get("Tailored_Resume")
-        with open(OUTPUT_RESUME_FILE, "w") as file:
-            file.write(resume)
 
-    response_dict = json.loads(response_json)
-    return response_dict
+    response = json.loads(response_json)
+    return response
 
 
 class URL(BaseModel):
@@ -117,19 +128,37 @@ class URL(BaseModel):
     url: str  # URL of the page requesting the job description
     demo: bool = False   # if true, return static demo response
 
+
 @app.post("/jobdescription")
 def get_job_description_from_URL(url: URL):
     """Fetch the job description from a given URL."""
-    response_dict = {"job_description": get_job_description(url.url)}
-    return response_dict
-
-
-def get_job_description(url: str="") -> str:
-    """Return the job description from a given URL."""
-    # TODO: Implement logic to fetch job description based on URL
+    # TODO: Implement logic to fetch job description based on URL vs. canned response
+    # STUBBED WITH CANNED RESPONSE
     with open(JOB_DESCRIPTION_DEMO_FILE, "r") as file:
         job_description = file.read()
-    return job_description
+    response = {"job_description": job_description}
+    return response
+
+
+@traceable(name="create_resume_diff")
+def create_resume_diff(baseline:str, revised:str, demo=False) -> str:
+    """Create a diff between two resume versions."""
+    # TODO: replace with deterministic diff logic vs LLM
+    if demo:
+        with open(RESUME_DIFF_DEMO, "r") as file:
+            diff = file.read()
+        return diff
+
+    with open(PROMPT_DIFF, "r") as file:
+        prompt = file.read()
+    prompt = prompt.replace("{{BASELINE}}", baseline)
+    prompt = prompt.replace("{{REVISED}}", revised)
+    response_json = prompt_LLM(prompt)
+    diff = json.loads(response_json).get("diff")
+    with open(RESUME_DIFF, "w") as file:
+        file.write(diff)
+
+    return diff
 
 
 class QuestionAnswers(BaseModel):
@@ -137,11 +166,41 @@ class QuestionAnswers(BaseModel):
     qa_pairs: list[dict[str, str]]  # list of question-answer pairs
     demo: bool = False   # if true, return static demo response
 
+
 @app.post("/questions")
 def process_questions_and_answers(user_response: QuestionAnswers):
-    """Process questions and answers pairs."""
-    # TODO: Implement logic to process questions and answers
-    user_response_dict = user_response.model_dump().get("qa_pairs")
+    """Save user response and revise review with the additional information."""
+    if user_response.demo:
+        with open(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE, "r") as file:
+            response_json = file.read()
+            response = json.loads(response_json)
+        return response
+
+    user_response_dict = user_response.qa_pairs
+    # Save user response to a file
     with open(USER_RESPONSE_FILE, "w") as file:
         json.dump(user_response_dict, file, indent=4)
-    return {"status": "ok"}
+
+    # Assemble API response
+    # TODO: implement logic to re-process review as opposed to canned response
+    with open(OUTPUT_FROM_LLM_PRIOR_FILE, "r") as file:
+        response_prior = json.loads(file.read())
+    response: dict = {
+        "Fit": response_prior["Fit"],
+        "Gap_Map": response_prior["Gap_Map"],
+        "Questions": response_prior["Questions"]
+    }
+    with open(RESUME_BASELINE, "r") as file:
+        baseline = file.read()
+    with open(RESUME_REVISED, "r") as file:
+        revised = file.read()
+    response["Tailored_Resume"] = create_resume_diff(baseline, revised, demo)
+
+    with open(OUTPUT_FROM_LLM_CURRENT_FILE, "w") as file:
+        file.write(json.dumps(response, indent=4))
+
+    return response
+
+
+
+
