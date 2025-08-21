@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
 from pathlib import Path
-import os
+import os, shutil
 from dotenv import load_dotenv
 from langsmith import traceable, Client
 import json
@@ -23,14 +23,15 @@ RESUME_FILE = USER_DIR / "resume.txt"
 ADDITIONAL_EXPERIENCE_FILE = USER_DIR / "additional_candidate_info.txt"
 # Prompt templates
 PROMPT_RESUME_REVIEW_FILE = PROMPT_DIR / "prompt_resume_review_GOLD.txt"
-PROMPT_DIFF = PROMPT_DIR / "prompt_resume_diff_GOLD.txt"
+PROMPT_DIFF_FILE = PROMPT_DIR / "prompt_resume_diff_GOLD.txt"
 # Temp working files
-RESUME_DIFF = TEMP_DIR / "resume_diff.txt"
-RESUME_BASELINE = TEMP_DIR / "resume_baseline.txt"
-RESUME_REVISED = TEMP_DIR / "resume_revised.txt"
+RESUME_DIFF_FILE = TEMP_DIR / "resume_diff.txt"
+RESUME_BASELINE_FILE = TEMP_DIR / "resume_baseline.txt"
+RESUME_REVISED_FILE = TEMP_DIR / "resume_revised.txt"
 USER_RESPONSE_FILE = TEMP_DIR / "user_response.json"
 OUTPUT_FROM_LLM_PRIOR_FILE = TEMP_DIR / "LLM_response_prior.json"
 OUTPUT_FROM_LLM_CURRENT_FILE = TEMP_DIR / "LLM_response_current.json"
+JOB_DESCRIPTION_FILE = TEMP_DIR / "job_description.txt"
 # Demo files
 JOB_DESCRIPTION_DEMO_FILE = TEMP_DIR / "job_description_demo.txt"
 RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = TEMP_DIR / "API_response_review_add_info_demo.json"
@@ -84,12 +85,62 @@ class URL(BaseModel):
 
 @app.post("/jobdescription")
 def get_job_description_from_URL(url:URL):
-    """Fetch job description from a given URL."""
+    """Clear old working files and fetch job description from URL."""
+    # delete old working files
+    try:
+        shutil.copyfile(RESUME_FILE, RESUME_BASELINE_FILE) # make the user's saved resume.txt the new baseline
+        os.remove(RESUME_REVISED_FILE)
+        os.remove(OUTPUT_FROM_LLM_PRIOR_FILE)
+        os.remove(OUTPUT_FROM_LLM_CURRENT_FILE)
+        os.remove(USER_RESPONSE_FILE)
+    except FileNotFoundError:
+        pass
+
     # TODO: Implement logic to fetch job description based on URL vs. canned response
     with open(JOB_DESCRIPTION_DEMO_FILE, "r") as file:
         job_description = file.read()
+
+    # save the job description to a file
+    with open(JOB_DESCRIPTION_FILE, "w") as file:
+        file.write(job_description)
+
     response = {"job_description": job_description}
     return response
+
+
+def create_review_prompt(job_description: str) -> str:
+    """Create JSON input and inject into prompt template."""
+    # create the JSON input for the LLM
+    input_dict = {}
+    input_dict["Job_Description"] = job_description
+    with open(RESUME_BASELINE_FILE, "r") as file:
+        input_dict["Resume"] = file.read()
+    with open(ADDITIONAL_EXPERIENCE_FILE, "r") as file:
+        input_dict["Additional_Info"] = file.read()
+
+    # add fit, gap_map and qa_pairs if they exist
+    try:
+        with open(OUTPUT_FROM_LLM_CURRENT_FILE, "r") as file:
+            LLM_response = json.load(file)
+            input_dict["Fit"] = LLM_response["Fit"]
+            input_dict["Gap_Map"] = LLM_response["Gap_Map"]
+    except FileNotFoundError:  # no working files on first run
+        pass
+    try:
+        with open(USER_RESPONSE_FILE, "r") as file:
+            user_response = json.load(file)
+            input_dict["qa_pairs"] = user_response
+    except FileNotFoundError:  # no user response on first run
+        pass
+
+    # replace placeholder {{input}} in the prompt template
+    with open(PROMPT_RESUME_REVIEW_FILE, "r") as file:
+        prompt = file.read()
+
+    input_json = json.dumps(input_dict, indent=4)
+    prompt = prompt.replace("{{INPUT}}", input_json)
+
+    return prompt
 
 
 class JobListing(BaseModel):
@@ -100,40 +151,18 @@ class JobListing(BaseModel):
     demo: bool = False   # if true, return static demo response
 
 
-def create_review_prompt(job_description: str) -> str:
-    """Replace placeholders in prompt template to create final prompt."""
-    # read prompt template
-    with open(PROMPT_RESUME_REVIEW_FILE, "r") as file:
-        prompt = file.read()
-
-    # replace {{placeholders}} with actual data
-    prompt = prompt.replace("{{JOB_DESCRIPTION}}", job_description)
-
-    with open(RESUME_FILE, "r") as file:
-        resume = file.read()
-    prompt = prompt.replace("{{RESUME}}", resume)
-
-    with open(ADDITIONAL_EXPERIENCE_FILE, "r") as file:
-        additional_experience = file.read()
-    prompt = prompt.replace("{{ADDITIONAL_EXPERIENCE}}", additional_experience)
-
-    return prompt
-
-
 @app.post("/review")
 @traceable(name="generate_review_endpoint")
 def generate_review(job_listing: JobListing):
     """Generate a review and tailored resume based on the job description.
-
     Algo:
     1. If demo is true, return canned response
-    2. Add qa_pairs, fit score, gap_map to JobListing Object
-    3. Pass JobListing Object to create_review_prompt
-    4. Call prompt_LLM with the prompt
-    5. Save the response to OUTPUT_FROM_LLM_CURRENT_FILE
-    6. Save the revised resume to RESUME_REVISED
-    7. Diff the baseline and revised resumes, and save the diff in the API response
-    8. Return the response
+    2. Create LLM prompt with create_review_prompt()
+    3. Call prompt_LLM with the prompt
+    4. Save the response to OUTPUT_FROM_LLM_CURRENT_FILE
+    5. Save the revised resume to RESUME_REVISED
+    6. Save the diff of baseline and revised resumes in the API response
+    7. Return the response
     """
     if job_listing.demo:
         # returned stubbed API response
@@ -155,10 +184,10 @@ def generate_review(job_listing: JobListing):
 
     revised_resume = response["Tailored_Resume"]
     # update the resume_revised file with the one from the response
-    with open(RESUME_REVISED, "w") as file:
+    with open(RESUME_REVISED_FILE, "w") as file:
         file.write(revised_resume)
     # diff the baseline and revised resumes, and save the diff in the API response
-    with open(RESUME_BASELINE, "r") as file:
+    with open(RESUME_BASELINE_FILE, "r") as file:
         baseline = file.read()
     diff = create_resume_diff(baseline, revised_resume)
     response["Tailored_Resume"] = diff
@@ -174,38 +203,28 @@ class QuestionAnswers(BaseModel):
 
 @app.post("/questions")
 def process_questions_and_answers(user_response: QuestionAnswers):
-    """Save user response and update review with the additional information."""
-    demo = user_response.demo
-    # if demo:
-    #     with open(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE, "r") as file:
-    #         response_json = file.read()
-    #         response = json.loads(response_json)
-    #     return response
+    """Generate an updated review and resume based on candidate's answers.
+    Algo:
+    1. If demo is true, return canned response
+    2. Save user response to USER_RESPONSE_FILE
+    4. Call generate_review() to get the updated review and resume
+    """
+    if user_response.demo:
+        with open(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE, "r") as file:
+            response_json = file.read()
+            response = json.loads(response_json)
+        return response
 
-    # Save user response to a file
     user_response_dict = user_response.qa_pairs
     with open(USER_RESPONSE_FILE, "w") as file:
         json.dump(user_response_dict, file, indent=4)
 
-    # Assemble API response
-    # TODO: change this to call update review_review
-    with open(OUTPUT_FROM_LLM_PRIOR_FILE, "r") as file:
-        response_prior = json.loads(file.read())
-    response: dict = {
-        "Fit": response_prior["Fit"],
-        "Gap_Map": response_prior["Gap_Map"],
-        "Questions": response_prior["Questions"]
-    }
-    with open(RESUME_BASELINE, "r") as file:
-        baseline = file.read()
-    with open(RESUME_REVISED, "r") as file:
-        revised = file.read()
-    response["Tailored_Resume"] = create_resume_diff(baseline, revised)
+    job_listing = JobListing()
+    with open(JOB_DESCRIPTION_FILE, "r") as file:
+        job_listing.job_description = file.read()
+    job_listing.url = "Follow-up prompt from user"
 
-    with open(OUTPUT_FROM_LLM_CURRENT_FILE, "w") as file:
-        file.write(json.dumps(response, indent=4))
-
-    return response
+    return generate_review(job_listing)
 
 
 

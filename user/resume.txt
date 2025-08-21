@@ -6,58 +6,65 @@ SILVER LAKE        Apr 2020 - Oct 2024, Menlo Park, CA
 Private equity firm investing in technology and technology-enabled companies. Responsible for improving operating effectiveness and efficiencies of portfolio companies. 
 
 Operating Executive 
-Strategy, Transformation, Organization Development, Executive Coaching & Recruiting.
-* Evaluated, recruited, onboarded and coached 10+ C-level executives 
-* Partnered with CPOs and CTOs to develop strategy, revise operating practices, institute AI workflows, and reset * organizations leading to 30%+ increases in productivity / velocity and 10%+ revenue/growth
-* Identified 20%+ EBITDA improvements, realizing >60% within 12 months through census-level workforce changes and AI efficiencies
-* Co-developed post-merger integration (PMI) plans with management teams, leading to realizations of targeted gains 4 quarters ahead of and 30%+ above plan
+Strategy, Transformation, Organization Development, Executive Recruiting & Coaching
+* Evaluated, recruited, onboarded and coached 10+ CEOs, CPOs, CTOs, and COOs
+* Partnered with CPOs and CTOs to develop product, AI and technology strategy, revise operating practices, and reset talent and organization structure, leading to 30%+ increases in productivity / velocity and 10%+ revenue/growth
+* Identified 20%+ operating margin / EBITDA improvements, underpinned by census-level workforce changes and AI efficiencies, with >60% realization after 12 months
+* Co-developed with management teams post-merger integration (PMI) plans, leading to realizations of targeted gains 4 quarters ahead of and 30%+ above plan
+
 
 MOVE INC / REALTOR.COM        Apr 2017 - Mar 2020, Santa Clara, CA
-Digital real estate search for consumers and SaaS platform for real estate agents. Direct report to CEO. Led 140 person team spanning product, UX, editorial, sales and operations. 
+Digital real estate search for consumers and lead generation for real estate agents. Direct report to CEO. Led 140 person team responsible for product, UX, editorial, sales and operations. 
 
 Chief Product Officer and General Manager
 Strategy pivot, consumer experience, organization development, general management
-* Created vision and company-wide support for a transformation into a consumer-centric experience, leading to a pivot in business model and largest acquisition 
-* Crafted re-imagined consumer experience, driven by design and AI/ML personalization and workflows to achieve 75M monthly unique users (+10% CAGR) and record user satisfaction (78 out of 100)
-* Delivered new monetization products and more leads to fuel 15% CAGR revenue growth 
-* Oversaw P&L, Sales, and Operations across $30M+ SaaS BU, consistently beating EBITDA targets
-* Rebuilt product organization and operating model, leading to a 25% increase in employee engagement and a 4 year low in voluntary turnover.
+* Created vision and enlisted company wide support for a consumer-centric product experience, leading to a pivot in our business model and company’s largest acquisition 
+* Led re-imagined consumer experience, driven by design and first-in-industry machine learning features to achieve 75M monthly unique users (+10% CAGR) and record user satisfaction score (78 out of 100)
+* Drove new monetization products and more leads to fuel 15% CAGR revenue growth 
+* Oversee P&L, sales and operations for two legacy businesses, beating EBITDA for all quarters 
+* Rebuilt the product team and instituted new managerial and operational processes, leading to a 25% increase in employee engagement and a 4 year low in voluntary turnover.
+
+
 
 FINANCIAL ENGINES (FNGN)         Apr 2014 - Mar 2017, Sunnyvale, CA
-Automated asset management and retirement advisory. Direct report to CEO and Section 16 officer. Led 90 person team spanning product, UX, analytics and marketing. 
+Online investment advice and automated asset management. Direct report to CEO and Section 16 officer. Led 90 person team responsible for product, UX, analytics and marketing. 
 
 EVP, Product Management and Consumer Marketing 
 Strategy pivot, culture transformation, execution velocity, consumer experience, innovation, data science
-* Oversaw asset management platform, which grew revenues 24% CAGR from 2014 to $400M in 2016 
-* Led vision and transformation from a B2B to a B2B2C model, reinvigorating a stagnant product to 120% increase in usage and 20% decrease in cancellations 
-* Implemented freemium and omnichannel campaigns across digital, print and call center, reversing a declining trend with a 33% increase in conversion
-& Accelerated execution 3X by establishing Agile development and reimaging Go-To-Market 
-* Drove organizational change and talent management, leading to employee engagement increasing by 40% and creation of ML/Data Science organization
+* Oversaw asset management business, which grew 24% CAGR from 2014 to $400M in 2016 
+* Led vision and transformation from a B2B to a B2B2C strategy, breaking out of a flat trend with 120% increase in product usage and 20% decrease in cancellations 
+* Drove shift to freemium and omnichannel marketing across digital, print and call center, reversing a declining trend with a 33% increase in conversion
+* Accelerated execution 3X by establishing agile development with Engineering and reimaging go-to-market with Sales 
+* Instituted organizational change and talent management, leading to employee engagement increasing by 40% and creation of data science organization
+
 
 33ACROSS        Apr 2012 - Mar 2014, Sunnyvale, CA
 Publisher network and big data adtech startup. Joined at Series B. Direct report to CEO. Led 3 product managers. 
 
 Chief Product Officer 
 Business model pivot, product innovation, consumer ad experience, publisher network
-* Led tiger team to conceive and get product-market fit for new product lines that became foundation for company relaunch 
-* Improved publisher products, reducing churn by 75% and expanding base 60% to 1M+ sites; won industry award for best technology innovation
-* Created new ad impressions that out-performed competitors 4X-10X and became 50%+ of company run-rate revenue after 18 months in market
+* Led tiger team to conceive, validate and build new product lines that became the basis for relaunching the company 
+* Drove improvements in publisher products, contributing to 75% churn reduction, 60% growth in publisher base (1M+ sites), and industry award for best technology innovation
+* Created new ad impressions that performed 4X-10X better than competitive inventory and became 50%+ of run-rate revenue after 18 months in market
+
 
 YP INC (formerly AT&T Interactive)        Jan 2009 - Mar 2012,  San Francisco, CA
 Publisher network and ad products for local businesses. Member of executive team. Led 60 person team responsible for product, business management and UX. Spun out in 2012. 
 
 Vice President, Product - Advertising Products and Publisher Network
 Product extensions, growth/harvest investment tradeoffs, ad network yield, sales enablement
-* Oversaw advertising products, which grew revenue 20% CAGR from 2008 to $975M in 2011, with 3 out of 4 product lines exceeding targets 
-* Overhauled existing ad products and expanded into small business CRM, with new products contributing 50%+ of revenue growth in 2009-2011 
-* Developed mobile ad network with AT&T targeting data, achieving 2X better eCPMs than competitors 
-* Lifted sales force productivity with 45%+ increase in qualified leads, mobile-first positioning, and enhanced pre-sales tools 
+* Oversaw the advertising business, which grew 20% CAGR from 2008 to $975M in 2011, with 3 out of 4 product lines exceeding revenue targets 
+* Led restructuring of existing ad products and expansion into small business CRM, with new products introduced after 2008 contributing 50%+ of revenue growth in 2009-2011 
+* Created mobile ad network specializing in hyperlocal intent with AT&T targeting data, achieving eCPMs 2X industry 
+* Lifted sales force productivity with 45%+ increase in qualified leads, mobile-first positioning and enhanced pre-sales preparation tools 
+
 
 Earlier career roles:
-JAXTR, VP Product (Series A)        May 2007 - Dec 2009, Menlo Park, CA
+JAXTR, VP Product        May 2007 - Dec 2009, Menlo Park, CA
 EBAY INC, Group Product Manager        May 2004 - Apr 2007, San Jose, CA
-UPWORK, Director Category Management (Series A)        Aug 2004 - May 2007 Sunnyvale, CA
+UPWORK, Director Marketing and Category Management        Aug 2004 - May 2007 Sunnyvale, CA
 BOSTON CONSULTING GROUP, Associate        Feb 1996 - Jun 1998 Kuala Lumpur, Malaysia
+
 
 ## EDUCATION
 M.I.T. SLOAN SCHOOL OF MANAGEMENT        Aug 1998 - Jun 2000 Cambridge, MA
