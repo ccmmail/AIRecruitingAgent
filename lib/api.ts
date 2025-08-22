@@ -66,7 +66,7 @@ export async function postQuestions({
   console.log("[v0] postQuestions - Using backend URL:", base)
 
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+  const timeoutId = setTimeout(() => controller.abort(), 150000) // 150s timeout
 
   try {
     const res = await fetch(`${base}/questions`, {
