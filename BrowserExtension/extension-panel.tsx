@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { FileText, CheckCircle, AlertCircle, Linkedin, Loader2, Download, Copy, Send } from "lucide-react"
-import { postReviewWithRetry, postQuestions, cleanMarkdown, getCurrentTabUrl, getJobDescription } from "@/lib/api"
+import { postReviewWithRetry, postQuestions, cleanMarkdown, getCurrentTabUrl, getJobDescription, manageResume } from "@/lib/api"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { Tooltip } from "@/components/tooltip"
 
@@ -52,6 +52,8 @@ export default function Component() {
   const [showResumeTooltip, setShowResumeTooltip] = useState(true)
   const [showEditingTooltip, setShowEditingTooltip] = useState(true)
   const [demoState, setDemoState] = useState(true)
+  const [initialResume, setInitialResume] = useState("")
+  const [isLoadingResume, setIsLoadingResume] = useState(true)
 
   useEffect(() => {
     const initializePanel = async () => {
@@ -59,6 +61,25 @@ export default function Component() {
         const url = await getCurrentTabUrl()
         setActiveTabUrl(url)
 
+        // First, load the resume
+        setIsLoadingResume(true)
+        try {
+          const resumeResponse = await manageResume({ action: "load" })
+          console.log("[v0] Resume loaded successfully")
+          if (resumeResponse?.resume) {
+            setInitialResume(resumeResponse.resume)
+            setTailoredMarkdown(resumeResponse.resume)
+            console.log("[v0] Resume content loaded, length:", resumeResponse.resume.length)
+          } else {
+            console.log("[v0] No resume content in response")
+          }
+        } catch (resumeError) {
+          console.log("[v0] Failed to load resume:", resumeError)
+        } finally {
+          setIsLoadingResume(false)
+        }
+
+        // Then, proceed with the job description loading
         if (demoState) {
           console.log("[v0] Demo_State is true, getting demo job description")
           const jdResponse = await getJobDescription({ url: url, demo: true })
@@ -209,7 +230,9 @@ export default function Component() {
       )
 
       if (result) {
-        setQuestionsSubmitted(true)
+        // Clear the user input in the text fields
+        setQuestionAnswers({});
+        // Note: We're no longer setting questionsSubmitted to true
       }
     } catch (err) {
       console.log("[v0] Failed to submit questions:", err)
@@ -328,7 +351,7 @@ export default function Component() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Loading job description...</p>
+            <p className="text-sm text-muted-foreground">Loading data...</p>
           </div>
         </div>
       ) : (
@@ -340,7 +363,7 @@ export default function Component() {
             <TabsTrigger value="review" className="flex items-center gap-1" disabled={!review}>
               Review
             </TabsTrigger>
-            <TabsTrigger value="resume" className="flex items-center gap-1" disabled={!tailoredMarkdown}>
+            <TabsTrigger value="resume" className="flex items-center gap-1" disabled={!tailoredMarkdown && !initialResume}>
               Resume
             </TabsTrigger>
             <TabsTrigger value="application" className="flex items-center gap-1">
@@ -541,19 +564,14 @@ export default function Component() {
                       <div className="mt-4 pt-4 border-t bg-background">
                     <Button
                       onClick={handleSubmitQuestions}
-                      disabled={isSubmittingQuestions || questionsSubmitted}
+                      disabled={isSubmittingQuestions}
                       className="w-full"
                       variant="secondary"
                     >
                       {isSubmittingQuestions ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Submitting...
-                        </>
-                      ) : questionsSubmitted ? (
-                        <>
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Additional Information Submitted
+                          Generating...
                         </>
                       ) : (
                         <>
@@ -593,7 +611,7 @@ export default function Component() {
                     variant="outline"
                     size="sm"
                     onClick={handleCopyMarkdown}
-                    disabled={!tailoredMarkdown}
+                    disabled={!tailoredMarkdown && !initialResume}
                     className={copyFeedback ? "bg-green-50 border-green-300" : ""}
                   >
                     <Copy className="w-4 h-4 mr-1" />
@@ -603,7 +621,7 @@ export default function Component() {
                     variant="outline"
                     size="sm"
                     onClick={handleDownloadMarkdown}
-                    disabled={!tailoredMarkdown}
+                    disabled={!tailoredMarkdown && !initialResume}
                     className={downloadFeedback ? "bg-green-50 border-green-300" : ""}
                   >
                     <Download className="w-4 h-4 mr-1" />
@@ -613,34 +631,40 @@ export default function Component() {
               </div>
 
               <ScrollArea className="h-[calc(100vh-150px)]">
-
-                {tailoredMarkdown ? (
-                  <div className="bg-white p-6 text-base text-s">
-                     {showResumeTooltip && (
-                    <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
-                      My suggestions are in redline. Hover over{" "}
-                      <span className="text-red-600 line-through">red strikethrough</span> or{" "}
-                      <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit changes.
-                      Click green text to edit inline.
-                      <br />
-                      <br />
-                      The redline toggle includes or omits redlines for display, copy, and download.
-                    </Tooltip>
-                      )}
-
-                <div className="pb-8">
-                 <ResumeRenderer
-                      markdown={tailoredMarkdown}
-                      showRedlines={showRedlines}
-                      onAcceptChange={handleAcceptChange}
-                      onRejectChange={handleRejectChange}
-                      onEditChange={handleEditChange}
-                    />
+                {isLoadingResume ? (
+                  <div className="flex items-center justify-center h-32">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Loading resume...</p>
+                    </div>
                   </div>
-                </div>
+                ) : tailoredMarkdown || initialResume ? (
+                  <div className="bg-white p-6 text-base text-s">
+                    {showResumeTooltip && (
+                      <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
+                        My suggestions are in redline. Hover over{" "}
+                        <span className="text-red-600 line-through">red strikethrough</span> or{" "}
+                        <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit changes.
+                        Click green text to edit inline.
+                        <br />
+                        <br />
+                        The redline toggle includes or omits redlines for display, copy, and download.
+                      </Tooltip>
+                    )}
+
+                    <div className="pb-8">
+                      <ResumeRenderer
+                        markdown={tailoredMarkdown || initialResume}
+                        showRedlines={showRedlines}
+                        onAcceptChange={handleAcceptChange}
+                        onRejectChange={handleRejectChange}
+                        onEditChange={handleEditChange}
+                      />
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-32 text-muted-foreground">
-                    <p className="text-s">No resume recommendations available</p>
+                    <p className="text-s">No resume available</p>
                   </div>
                 )}
               </ScrollArea>

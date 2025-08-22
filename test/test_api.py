@@ -156,4 +156,12 @@ def test_process_questions_and_answers_demo(HTTP_client, monkeypatch):
     # TODO: Add assertions to check the response content
 
 
+def test_resume_actions(HTTP_client, monkeypatch):
+    """Test /resume endpoint for getting a resume."""
+    resume = "This is a test resume"
+    monkeypatch.setattr(api, "RESUME_FILE", TEST_RESUME_FILE)
 
+    response = HTTP_client.get("/resume", params={"action": "load"})
+    assert response.status_code == 200
+    data_dict = response.json()
+    assert data_dict["resume"] == resume

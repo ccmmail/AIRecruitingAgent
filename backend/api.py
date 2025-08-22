@@ -130,7 +130,7 @@ class JobListing(BaseModel):
     """Define the shape of data expected by /review."""
     job_description: str  # Job description to be reviewed
     url: str  # URL of calling page for tracking purposes
-    save_output: bool = False   # if true, save LLM response and markdown resume to files
+    # save_output: bool = False   # if true, save LLM response and markdown resume to files
     demo: bool = False   # if true, return static demo response
 
 
@@ -203,6 +203,13 @@ def process_questions_and_answers(user_response: QuestionAnswers):
     return response
 
 
-
+@app.get("/resume")
+def process_resume(action: str = "load"):
+    """Process the user's saved resume per front-end command."""
+    if action == "load":
+        resume = RESUME_FILE.read_text()
+    else:
+        return {"error": "Unsupported action."}
+    return {"resume": resume}
 
 

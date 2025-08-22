@@ -27,7 +27,6 @@ export async function postReview({
       body: JSON.stringify({
         job_description: jobDescription,
         url: url,
-        save_output: true,
         demo: demo || false,
       }),
       signal: controller.signal,
@@ -222,6 +221,40 @@ export async function getJobDescription({ url, demo }: { url: string; demo?: boo
       console.log("[v0] getJobDescription - Check if backend server is running and CORS is configured")
     }
 
+    throw error
+  }
+}
+
+export async function manageResume({ action = "load" }: { action?: string } = {}) {
+  const base = getBackendUrl()
+  console.log("[v0] manageResume - Using backend URL:", base)
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+
+  try {
+    const res = await fetch(`${base}/resume?action=${action}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeoutId)
+    console.log("[v0] manageResume - Response status:", res.status)
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`)
+    }
+
+    const data = await res.json()
+    console.log("[v0] manageResume - Success response received")
+    return data
+  } catch (error: unknown) {
+    clearTimeout(timeoutId)
+    console.error("API error:", error instanceof Error ? error.message : String(error))
     throw error
   }
 }
