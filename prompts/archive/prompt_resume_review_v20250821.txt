@@ -22,7 +22,7 @@ Deliverables (in order):
 2. "Gap_Map" (table):
 - Columns: JD Requirement/Keyword (High/Med/Low) | Present in Resume? (Y/N/Partial) | Where/Evidence | Gap handling (add/rephrase/omit and rationale (≤15 words)).
 3. "Questions" for the Candidate (max 4):
-- Max 4. Each question must target a specific gaps in the Gap_Map. Focus on experiences, outcomes, specific tools/tech, and scope (e.g., team size, budget, ARR) that would increase alignment with the job description. Phrase as yes/no or short-answer prompts.
+- Max 4. Each question must target a specific gaps in the Gap_Map. Focus on experiences, outcomes, specific tools/tech, and scope (e.g., team size, budget, ARR) that would increase alignment with the job description. Phrase as yes/no or short-answer prompts. Only ask a question if the information would materially improve the candidate's fit.
 - Add an additional bonus question of "What else should I know about you and this job?"
 4. "Tailored_Resume":
 - Provide a modified resume that best reflects your recommended positioning, career narrative, and gap handling
