@@ -25,7 +25,6 @@ USER_RESPONSE_FILE = BASE_DIR.resolve().parent / "temp" / "user_response.json"
 OUTPUT_FROM_LLM_CURRENT_FILE = BASE_DIR.resolve().parent / "temp" / "LLM_response_current.json"
 # STUBBED LLM RESPONSE FILES
 TEST_STUB_OUTPUT_FROM_LLM_FILE = BASE_DIR / "temp" / "test_LLM_response_stub.json"
-TEST_FULL_OUTPUT_FROM_LLM_FILE = BASE_DIR / "temp" / "test_LLM_response_current.json"
 
 @pytest.fixture
 def HTTP_client():

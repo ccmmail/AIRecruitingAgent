@@ -1,6 +1,6 @@
 """API for generating a resume review and changes tailored to a given job description."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
@@ -57,6 +57,15 @@ langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
 def show_heartbeat():
     """Return a message to show API is up."""
     return {"message": "Hello World"}
+
+def safe_json_loads(text: str) -> dict:
+    """test if text is valid JSON, and return it as a dict."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        snippet = text[:300].replace("\n","\\n")
+        raise HTTPException(status_code=500, detail=f"LLM returned non-JSON: {e}: '{snippet}…'")
+
 
 @traceable(name="prompt_LLM")
 def prompt_LLM(prompt: str) -> str:
@@ -173,11 +182,13 @@ def generate_review(job_listing: JobListing):
 
     prompt = create_review_prompt(job_listing.job_description)
     LLM_response_json = prompt_LLM(prompt)
-    response = json.loads(LLM_response_json)
+    response = safe_json_loads(LLM_response_json)
 
     # rotate the files to keep the last two LLM responses
     try:
         os.replace(OUTPUT_FROM_LLM_CURRENT_FILE, OUTPUT_FROM_LLM_PRIOR_FILE)
+    except FileNotFoundError:
+        pass
     finally:
         with open(OUTPUT_FROM_LLM_CURRENT_FILE, "w") as file:
             file.write(LLM_response_json)
@@ -209,22 +220,29 @@ def process_questions_and_answers(user_response: QuestionAnswers):
     2. Save user response to USER_RESPONSE_FILE
     4. Call generate_review() to get the updated review and resume
     """
-    if user_response.demo:
-        with open(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE, "r") as file:
-            response_json = file.read()
-            response = json.loads(response_json)
-        return response
+    # if user_response.demo:
+    #     with open(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE, "r") as file:
+    #         response_json = file.read()
+    #         response = json.loads(response_json)
+    #     return response
 
     user_response_dict = user_response.qa_pairs
     with open(USER_RESPONSE_FILE, "w") as file:
         json.dump(user_response_dict, file, indent=4)
 
-    job_listing = JobListing()
     with open(JOB_DESCRIPTION_FILE, "r") as file:
-        job_listing.job_description = file.read()
-    job_listing.url = "Follow-up prompt from user"
+        job_description = file.read()
+    job_listing = JobListing(
+        job_description=job_description,
+        url="Follow-up prompt from user"
+    )
 
-    return generate_review(job_listing)
+    response = generate_review(job_listing)
+
+    with open(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE, "w") as file:
+        json.dump(response, file, indent=4)
+
+    return response
 
 
 
