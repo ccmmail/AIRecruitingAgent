@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { FileText, CheckCircle, AlertCircle, Linkedin, Loader2, Download, Copy, Send } from "lucide-react"
+import { FileText, CheckCircle, AlertCircle, Linkedin, Loader2, Copy, Send } from "lucide-react"
 import { postReviewWithRetry, postQuestions, cleanMarkdown, getCurrentTabUrl, getJobDescription, manageResume } from "@/lib/api"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { Tooltip } from "@/components/tooltip"
@@ -46,7 +46,7 @@ export default function Component() {
   const [isSubmittingQuestions, setIsSubmittingQuestions] = useState(false)
   const [questionsSubmitted, setQuestionsSubmitted] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState(false)
-  const [downloadFeedback, setDownloadFeedback] = useState(false)
+  // Remove downloadFeedback state since we're removing the download button
   const [showJDTooltip, setShowJDTooltip] = useState(true)
   const [showReviewTooltip, setShowReviewTooltip] = useState(true)
   const [showResumeTooltip, setShowResumeTooltip] = useState(true)
@@ -68,7 +68,7 @@ export default function Component() {
           console.log("[v0] Resume loaded successfully")
           if (resumeResponse?.resume) {
             setInitialResume(resumeResponse.resume)
-            setTailoredMarkdown(resumeResponse.resume)
+            setTailoredMarkdown(resumeResponse.resume) // Use initial resume as tailored markdown until we get a review
             console.log("[v0] Resume content loaded, length:", resumeResponse.resume.length)
           } else {
             console.log("[v0] No resume content in response")
@@ -77,9 +77,10 @@ export default function Component() {
           console.log("[v0] Failed to load resume:", resumeError)
         } finally {
           setIsLoadingResume(false)
+          setIsInitialLoading(false) // End initial loading after resume is loaded
         }
 
-        // Then, proceed with the job description loading
+        // Then, proceed with the job description loading (existing behavior)
         if (demoState) {
           console.log("[v0] Demo_State is true, getting demo job description")
           const jdResponse = await getJobDescription({ url: url, demo: true })
@@ -230,8 +231,8 @@ export default function Component() {
       )
 
       if (result) {
-        // Clear the user input in the text fields
-        setQuestionAnswers({});
+        // Clear the user input in the text fields after successful response
+        setQuestionAnswers({})
         // Note: We're no longer setting questionsSubmitted to true
       }
     } catch (err) {
@@ -283,10 +284,11 @@ export default function Component() {
   }
 
   const handleCopyMarkdown = async () => {
-    if (!tailoredMarkdown) return
+    if (!tailoredMarkdown && !initialResume) return
 
     try {
-      const contentToCopy = showRedlines ? tailoredMarkdown : cleanMarkdown(tailoredMarkdown)
+      // Always copy clean version without markdown
+      const contentToCopy = cleanMarkdown(tailoredMarkdown || initialResume)
       await navigator.clipboard.writeText(contentToCopy)
       setCopyFeedback(true)
       setTimeout(() => setCopyFeedback(false), 2000)
@@ -295,32 +297,7 @@ export default function Component() {
     }
   }
 
-  const handleDownloadMarkdown = () => {
-    if (!tailoredMarkdown) return
-
-    try {
-      const content = showRedlines ? tailoredMarkdown : cleanMarkdown(tailoredMarkdown)
-      const filename = showRedlines ? "resume_redline.md" : "resume.md"
-
-      const blob = new Blob([content], { type: "text/markdown;charset=utf-8" })
-      const url = URL.createObjectURL(blob)
-
-      const link = document.createElement("a")
-      link.href = url
-      link.download = filename
-      link.style.display = "none"
-
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-
-      setTimeout(() => URL.revokeObjectURL(url), 100)
-      setDownloadFeedback(true)
-      setTimeout(() => setDownloadFeedback(false), 2000)
-    } catch (err) {
-      console.error("Failed to download:", err)
-    }
-  }
+  // Remove handleDownloadMarkdown function since we're removing the download button
 
   useEffect(() => {
     const textarea = document.getElementById("job-description") as HTMLTextAreaElement
@@ -351,7 +328,7 @@ export default function Component() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Loading data...</p>
+            <p className="text-sm text-muted-foreground">Loading job description...</p>
           </div>
         </div>
       ) : (
@@ -384,10 +361,11 @@ export default function Component() {
 
               {showJDTooltip && (
                 <Tooltip title="Sample Job and Resume" onClose={() => setShowJDTooltip(false)}>
-                  As a demo, go to the "Review" tab to see my comments on the job description below for a canned resume.
+                  Paste your job description into the text area to get started. Generating a review takes up to 2 minutes.
                   <br />
                   <br />
-                  Paste your own job description into the text area below to get a customized review. Generating a review takes up to 2 minutes."
+                  Submit the job description below to see a demo review and redlined resume.
+                  "
                 </Tooltip>
               )}
 
@@ -571,7 +549,7 @@ export default function Component() {
                       {isSubmittingQuestions ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Generating...
+                          Submitting...
                         </>
                       ) : (
                         <>
@@ -615,18 +593,9 @@ export default function Component() {
                     className={copyFeedback ? "bg-green-50 border-green-300" : ""}
                   >
                     <Copy className="w-4 h-4 mr-1" />
-                    {copyFeedback ? "Copied!" : "Copy"}
+                    {copyFeedback ? "Copied!" : "Copy Clean"}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDownloadMarkdown}
-                    disabled={!tailoredMarkdown && !initialResume}
-                    className={downloadFeedback ? "bg-green-50 border-green-300" : ""}
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    {downloadFeedback ? "Downloaded!" : "Download"}
-                  </Button>
+                  {/* Download button removed */}
                 </div>
               </div>
 
@@ -640,28 +609,25 @@ export default function Component() {
                   </div>
                 ) : tailoredMarkdown || initialResume ? (
                   <div className="bg-white p-6 text-base text-s">
-                    {showResumeTooltip && (
-                      <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
-                        My suggestions are in redline. Hover over{" "}
-                        <span className="text-red-600 line-through">red strikethrough</span> or{" "}
-                        <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit changes.
-                        Click green text to edit inline.
-                        <br />
-                        <br />
-                        The redline toggle includes or omits redlines for display, copy, and download.
-                      </Tooltip>
-                    )}
+                     {showResumeTooltip && (
+                    <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
+                      My suggestions are in redline. Hover over{" "}
+                      <span className="text-red-600 line-through">red strikethrough</span> or{" "}
+                      <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit changes
+                      <br />
+                    </Tooltip>
+                      )}
 
-                    <div className="pb-8">
-                      <ResumeRenderer
-                        markdown={tailoredMarkdown || initialResume}
-                        showRedlines={showRedlines}
-                        onAcceptChange={handleAcceptChange}
-                        onRejectChange={handleRejectChange}
-                        onEditChange={handleEditChange}
-                      />
-                    </div>
+                <div className="pb-8">
+                 <ResumeRenderer
+                      markdown={tailoredMarkdown || initialResume}
+                      showRedlines={showRedlines}
+                      onAcceptChange={handleAcceptChange}
+                      onRejectChange={handleRejectChange}
+                      onEditChange={handleEditChange}
+                    />
                   </div>
+                </div>
                 ) : (
                   <div className="flex items-center justify-center h-32 text-muted-foreground">
                     <p className="text-s">No resume available</p>

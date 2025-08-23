@@ -27,6 +27,7 @@ export async function postReview({
       body: JSON.stringify({
         job_description: jobDescription,
         url: url,
+        save_output: true,
         demo: demo || false,
       }),
       signal: controller.signal,
@@ -137,6 +138,12 @@ export function cleanMarkdown(md: string): string {
         .replace(/<span\s+class=["']add["'][^>]*>(.*?)<\/span>/gi, "$1")
         // Remove <span class="del">...</span>
         .replace(/<span\s+class=["']del["'][^>]*>.*?<\/span>/gi, "")
+        // Remove <add>...</add> tags and keep content
+        .replace(/<add>(.*?)<\/add>/gi, "$1")
+        // Remove <span style="color:#...">...</span> and keep content
+        .replace(/<span style="color:#[0-9a-f]+">(.*?)<\/span>/gi, "$1")
+        // Remove any remaining HTML tags
+        .replace(/<[^>]*>/g, "")
         // Clean up extra whitespace
         .replace(/\n\s*\n\s*\n/g, "\n\n")
         .trim()
@@ -233,7 +240,8 @@ export async function manageResume({ action = "load" }: { action?: string } = {}
   const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
 
   try {
-    const res = await fetch(`${base}/resume?action=${action}`, {
+    // Changed query parameter from 'action' to 'command' to match backend API
+    const res = await fetch(`${base}/resume?command=${action}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -251,6 +259,13 @@ export async function manageResume({ action = "load" }: { action?: string } = {}
 
     const data = await res.json()
     console.log("[v0] manageResume - Success response received")
+
+    // Check if response contains the expected 'resume' property
+    if (!data.resume && !data.error) {
+      console.error("[v0] manageResume - Unexpected response format:", data)
+      throw new Error("Unexpected response format from server")
+    }
+
     return data
   } catch (error: unknown) {
     clearTimeout(timeoutId)
