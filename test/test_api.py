@@ -5,6 +5,8 @@ from backend import api
 from fastapi.testclient import TestClient
 from pathlib import Path
 import time
+from backend.utils import verify_token
+get_current_user = verify_token  # alias for clarity
 
 # Define the directory paths for the working files for test environment
 BASE_DIR = Path(__file__).resolve().parent
@@ -26,10 +28,20 @@ OUTPUT_FROM_LLM_CURRENT_FILE = BASE_DIR.resolve().parent / "temp" / "LLM_respons
 # STUBBED LLM RESPONSE FILES
 TEST_STUB_OUTPUT_FROM_LLM_FILE = BASE_DIR / "temp" / "test_LLM_response_stub.json"
 
+
 @pytest.fixture
 def HTTP_client():
     """Create a test client for the FastAPI app."""
-    return TestClient(api.app)
+    api.app.dependency_overrides[get_current_user] = lambda: {
+        "sub": "test-user-123",
+        "email": "test@example.com",
+        "name": "Test User",
+    }
+    with TestClient(api.app) as c:
+        yield c
+    api.app.dependency_overrides.clear()
+
+
 
 
 def check_file_created_recently(file_path: Path) -> bool:

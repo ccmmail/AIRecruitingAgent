@@ -11,6 +11,8 @@ import os, shutil
 import json
 from dotenv import load_dotenv
 from .utils import redline_diff, verify_token
+get_current_user = verify_token  # alias for clarity
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -137,7 +139,7 @@ class JobListing(BaseModel):
 
 @app.post("/review")
 @traceable(name="generate_review_endpoint")
-def generate_review(job_listing: JobListing, user=Depends(verify_token)):
+def generate_review(job_listing: JobListing, user=Depends(get_current_user)):
     """Generate a review and tailored resume based on the job description.
     Algo:
     1. If demo is true, return canned response
@@ -179,7 +181,7 @@ class QuestionAnswers(BaseModel):
 
 @app.post("/questions")
 @traceable(name="process_questions_and_answers_endpoint")
-def process_questions_and_answers(user_response: QuestionAnswers, user=Depends(verify_token)):
+def process_questions_and_answers(user_response: QuestionAnswers, user=Depends(get_current_user)):
     """Generate an updated review and resume based on candidate's answers.
     Algo:
     1. If demo is true, return canned response
@@ -205,7 +207,7 @@ def process_questions_and_answers(user_response: QuestionAnswers, user=Depends(v
 
 
 @app.get("/resume")
-def manage_resume(command:str, user=Depends(verify_token)):
+def manage_resume(command:str, user=Depends(get_current_user)):
     """Return the user's saved resume."""
     if command == "load":
         response = {"resume": RESUME_FILE.read_text()}
