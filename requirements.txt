@@ -1,9 +1,0 @@
-fastapi~=0.116.0
-uvicorn~=0.35.0
-pydantic~=2.11.7
-openai~=1.99.8
-python-dotenv~=1.0.0
-pytest~=8.3.4
-starlette~=0.47.2
-langsmith~=0.4.6
-python-jose~=3.5.0

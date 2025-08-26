@@ -1,24 +1,50 @@
-## AIRecruitingAgent
+# AI Recruiting Agent - Chrome Extension
 
-### Sync changes from v0-dev branch → main/BrowserExtension/
+A Chrome extension that helps with job applications by analyzing job descriptions and tailoring resumes using AI.
 
-git checkout main
+## Development Setup
 
-git pull
+1. Install dependencies:
+\`\`\`bash
+npm install
+\`\`\`
 
-git subtree pull --prefix=BrowserExtension origin v0-dev-fixsync --squash -m “v0.dev pull”
+2. Build the extension:
+\`\`\`bash
+npm run build
+\`\`\`
 
-git push
+3. Load the extension in Chrome:
+   - Open Chrome and navigate to `chrome://extensions/`
+   - Enable "Developer mode" (toggle in top right)
+   - Click "Load unpacked" and select the `dist` folder
+   - The extension should now appear in your extensions list
 
+## Usage
 
-### Sync changes from main/BrowserExtension/ → v0-dev branch
+1. Navigate to any job posting website (LinkedIn, Indeed, etc.)
+2. Click the extension icon in the toolbar or use the popup
+3. Click "Open Assistant Panel" to launch the AI assistant
+4. Paste the job description and get AI-powered resume recommendations
 
-git checkout main
+## Development
 
-git pull
+- `npm run build` - Build the extension once
+- `npm run dev` - Build and watch for changes
 
-git add BrowserExtension 
+## Files Structure
 
-git commit -m "Update BrowserExtension"
+- `manifest.json` - Extension manifest
+- `popup.html/js` - Extension popup interface
+- `content.js` - Content script injected into web pages
+- `background.js` - Background service worker
+- `panel.html` - Main React-based panel interface
+- `build.js` - Build script to prepare extension files
 
-git subtree push --prefix=BrowserExtension origin v0-dev
+## Features
+
+- Job description analysis
+- Resume tailoring suggestions
+- Redline editing interface
+- Copy/download functionality
+- Demo mode for testing
