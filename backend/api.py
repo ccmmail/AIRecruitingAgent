@@ -1,7 +1,8 @@
 """API for generating a resume review and changes tailored to a given job description."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
 from langsmith import traceable, Client
@@ -9,7 +10,7 @@ from pathlib import Path
 import os, shutil
 import json
 from dotenv import load_dotenv
-from .diff import redline_diff
+from .utils import redline_diff, verify_token
 
 # Load environment variables from .env file
 load_dotenv()
@@ -37,15 +38,16 @@ RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = TEMP_DIR / "API_response_review_add_info_de
 RESPONSE_REVIEW_DEMO_FILE = TEMP_DIR / "API_response_review_demo.json"
 
 
-# Initialize the FastAPI application, OpenAI client, and LangSmith tracer
+# Initialize the FastAPI application
 app = FastAPI(debug=True)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict to specific origins
+    allow_origins=["chrome-extension://<YOUR_EXTENSION_ID>"],  # In production, restrict to specific origins
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+# Initialize OpenAI client and LangSmith tracer
 LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
@@ -130,13 +132,12 @@ class JobListing(BaseModel):
     """Define the shape of data expected by /review."""
     job_description: str  # Job description to be reviewed
     url: str  # URL of calling page for tracking purposes
-    save_output: bool = False   # if true, save LLM response and markdown resume to files
     demo: bool = False   # if true, return static demo response
 
 
 @app.post("/review")
 @traceable(name="generate_review_endpoint")
-def generate_review(job_listing: JobListing):
+def generate_review(job_listing: JobListing, user=Depends(verify_token)):
     """Generate a review and tailored resume based on the job description.
     Algo:
     1. If demo is true, return canned response
@@ -178,7 +179,7 @@ class QuestionAnswers(BaseModel):
 
 @app.post("/questions")
 @traceable(name="process_questions_and_answers_endpoint")
-def process_questions_and_answers(user_response: QuestionAnswers):
+def process_questions_and_answers(user_response: QuestionAnswers, user=Depends(verify_token)):
     """Generate an updated review and resume based on candidate's answers.
     Algo:
     1. If demo is true, return canned response
@@ -204,7 +205,7 @@ def process_questions_and_answers(user_response: QuestionAnswers):
 
 
 @app.get("/resume")
-def manage_resume(command:str):
+def manage_resume(command:str, user=Depends(verify_token)):
     """Return the user's saved resume."""
     if command == "load":
         response = {"resume": RESUME_FILE.read_text()}

@@ -129,7 +129,6 @@ def test_generate_review(HTTP_client, monkeypatch):
         "/review",
         json={
             "job_description": job_description,
-            "save_output": True,
             "url": "https://example.com/bestjobever",
             "demo": False
         }
