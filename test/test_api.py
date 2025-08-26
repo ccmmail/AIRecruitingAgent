@@ -42,8 +42,6 @@ def HTTP_client():
     api.app.dependency_overrides.clear()
 
 
-
-
 def check_file_created_recently(file_path: Path) -> bool:
     """Check if the output file was created within the last 5 seconds (helper function)."""
     age_seconds = time.time() - file_path.stat().st_mtime
@@ -74,7 +72,7 @@ This is <span style="color:#c00000"><del>a text</del></span><span style="color:#
     assert actual_diff == expected_diff
 
 
-def test_create_review_prompt_first_load(monkeypatch):
+def test_create_review_prompt_initial_load(monkeypatch):
     """Test the create_resume_review_prompt function."""
     api.get_job_description_from_URL("https://example.com/job") # Stubbed call to delete working files
     job_description = "This the test job description"
@@ -165,6 +163,11 @@ def test_process_questions_and_answers_demo(HTTP_client, monkeypatch):
     assert response.status_code == 200
     data_dict = response.json()
     # TODO: Add assertions to check the response content
+
+
+def test_process_questions_and_answers(HTTP_client, monkeypatch):
+    # TODO: Implement a non-demo test once we have a suitable stubbed LLM response file
+    return
 
 
 def test_manage_resume(HTTP_client, monkeypatch):

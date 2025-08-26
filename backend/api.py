@@ -87,7 +87,7 @@ class URL(BaseModel):
 
 
 @app.post("/jobdescription")
-def get_job_description_from_URL(url:URL):
+def get_job_description_from_URL(url:URL, user=Depends(get_current_user)):
     """Setup temp working directory and fetch job description from URL."""
     # make the user's saved resume.txt the new baseline
     shutil.copyfile(RESUME_FILE, RESUME_BASELINE_FILE)
