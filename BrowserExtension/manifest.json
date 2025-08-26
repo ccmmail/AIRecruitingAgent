@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "AI Recruiting Agent",
+  "version": "1.0.0",
+  "description": "AI-powered job application helper that analyzes job descriptions and tailors your resume",
+  "permissions": ["activeTab", "storage", "tabs", "sidePanel"],
+  "host_permissions": ["http://localhost:8000/*", "https://*/*"],
+  "action": {
+    "default_title": "AI Recruiting Agent"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["panel.html", "next-static/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
