@@ -27,7 +27,6 @@ export async function postReview({
       body: JSON.stringify({
         job_description: jobDescription,
         url: url,
-        save_output: true,
         demo: demo || false,
       }),
       signal: controller.signal,

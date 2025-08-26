@@ -11,14 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { FileText, CheckCircle, AlertCircle, Linkedin, Loader2, Copy, Send } from "lucide-react"
-import {
-  postReviewWithRetry,
-  postQuestions,
-  cleanMarkdown,
-  getCurrentTabUrl,
-  getJobDescription,
-  manageResume,
-} from "@/lib/api"
+import { postReviewWithRetry, postQuestions, cleanMarkdown, getCurrentTabUrl, getJobDescription, manageResume } from "@/lib/api"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { Tooltip } from "@/components/tooltip"
 
@@ -61,10 +54,6 @@ export default function Component() {
   const [demoState, setDemoState] = useState(true)
   const [initialResume, setInitialResume] = useState("")
   const [isLoadingResume, setIsLoadingResume] = useState(true)
-  const [showManageResumes, setShowManageResumes] = useState(false)
-  const [savedResumes, setSavedResumes] = useState<string[]>([])
-  const [customResumeName, setCustomResumeName] = useState("")
-  const [isManagingResume, setIsManagingResume] = useState(false)
 
   useEffect(() => {
     const initializePanel = async () => {
@@ -211,7 +200,7 @@ export default function Component() {
           jobDescription: jobDescription.trim(),
           url: activeTabUrl,
           demo: demoState,
-        }),
+        })
       )
     } catch (err) {
       console.log("[v0] Review request failed:", err)
@@ -237,8 +226,8 @@ export default function Component() {
       const result = await handleApiResponse(
         postQuestions({
           qa_pairs,
-          demo: demoState,
-        }),
+          demo: demoState
+        })
       )
 
       if (result) {
@@ -318,94 +307,6 @@ export default function Component() {
     }
   }, [jobDescription])
 
-  const handleSaveAsDefault = async () => {
-    if (!tailoredMarkdown && !initialResume) return
-
-    setIsManagingResume(true)
-    try {
-      const contentToSave = cleanMarkdown(tailoredMarkdown || initialResume)
-      await manageResume({
-        action: "save",
-        resume: contentToSave,
-        filename: "default.txt",
-      })
-      console.log("[v0] Resume saved as default")
-    } catch (err) {
-      console.log("[v0] Failed to save default resume:", err)
-    } finally {
-      setIsManagingResume(false)
-    }
-  }
-
-  const handleSaveWithCustomName = async () => {
-    if (!customResumeName.trim() || (!tailoredMarkdown && !initialResume)) return
-
-    setIsManagingResume(true)
-    try {
-      const contentToSave = cleanMarkdown(tailoredMarkdown || initialResume)
-      const filename = customResumeName.endsWith(".txt") ? customResumeName : `${customResumeName}.txt`
-      await manageResume({
-        action: "save",
-        resume: contentToSave,
-        filename: filename,
-      })
-      setCustomResumeName("")
-      await loadSavedResumes()
-      console.log("[v0] Resume saved with custom name:", filename)
-    } catch (err) {
-      console.log("[v0] Failed to save custom resume:", err)
-    } finally {
-      setIsManagingResume(false)
-    }
-  }
-
-  const loadSavedResumes = async () => {
-    try {
-      const response = await manageResume({ action: "list" })
-      if (response?.resumes) {
-        setSavedResumes(response.resumes)
-      }
-    } catch (err) {
-      console.log("[v0] Failed to load saved resumes:", err)
-    }
-  }
-
-  const handleLoadResume = async (filename: string) => {
-    setIsManagingResume(true)
-    try {
-      const response = await manageResume({ action: "load", filename: filename })
-      if (response?.resume) {
-        setTailoredMarkdown(response.resume)
-        setInitialResume(response.resume)
-        setShowManageResumes(false)
-        console.log("[v0] Resume loaded:", filename)
-      }
-    } catch (err) {
-      console.log("[v0] Failed to load resume:", err)
-    } finally {
-      setIsManagingResume(false)
-    }
-  }
-
-  const handleDeleteResume = async (filename: string) => {
-    setIsManagingResume(true)
-    try {
-      await manageResume({ action: "delete", filename: filename })
-      await loadSavedResumes()
-      console.log("[v0] Resume deleted:", filename)
-    } catch (err) {
-      console.log("[v0] Failed to delete resume:", err)
-    } finally {
-      setIsManagingResume(false)
-    }
-  }
-
-  useEffect(() => {
-    if (showManageResumes) {
-      loadSavedResumes()
-    }
-  }, [showManageResumes])
-
   if (!isOpen) return null
 
   return (
@@ -439,7 +340,7 @@ export default function Component() {
             <TabsTrigger value="review" className="flex items-center gap-1" disabled={!review}>
               Review
             </TabsTrigger>
-            <TabsTrigger value="resume" className="flex items-center gap-1">
+            <TabsTrigger value="resume" className="flex items-center gap-1" disabled={!tailoredMarkdown && !initialResume}>
               Resume
             </TabsTrigger>
             <TabsTrigger value="application" className="flex items-center gap-1">
@@ -460,11 +361,11 @@ export default function Component() {
 
               {showJDTooltip && (
                 <Tooltip title="Sample Job and Resume" onClose={() => setShowJDTooltip(false)}>
-                  Paste your job description into the text area to get started. Generating a review takes up to 2
-                  minutes.
+                  Paste your job description into the text area to get started. Generating a review takes up to 2 minutes.
                   <br />
                   <br />
-                  Submit the job description below to see a demo review and redlined resume. "
+                  Submit the job description below to see a demo review and redlined resume.
+                  "
                 </Tooltip>
               )}
 
@@ -501,7 +402,11 @@ export default function Component() {
               </div>
 
               <div className="mt-4 pt-4 border-t bg-background">
-                <Button onClick={handleSendToReview} disabled={!jobDescription.trim() || isLoading} className="w-full">
+                <Button
+                  onClick={handleSendToReview}
+                  disabled={!jobDescription.trim() || isLoading}
+                  className="w-full"
+                >
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -552,16 +457,16 @@ export default function Component() {
 
                   <ScrollArea className="h-[calc(100vh-200px)]">
                     <div className="space-y-6 p-4">
-                      {showReviewTooltip && (
-                        <Tooltip title="Example resume review" onClose={() => setShowReviewTooltip(false)}>
-                          I assessed and scored your qualifications against the job's "must-haves". See "Resume" tab for
-                          a tailored resume you can use.
-                          <br />
-                          <br />I have some optional questions to find out if you have other relevant experience not
-                          currently listed in your resume. I can use this info to update my review and resume
-                          suggestions.
-                        </Tooltip>
-                      )}
+
+                    {showReviewTooltip && (
+                      <Tooltip title="Example resume review" onClose={() => setShowReviewTooltip(false)}>
+                        I assessed and scored your qualifications against the job's "must-haves". See "Resume" tab for a
+                        tailored resume you can use.
+                        <br />
+                        <br />I have some optional questions to find out if you have other relevant experience not
+                        currently listed in your resume. I can use this info to update my review and resume suggestions.
+                      </Tooltip>
+                    )}
 
                       <div>
                         <h3 className="text-base font-medium">Rationale</h3>
@@ -635,27 +540,30 @@ export default function Component() {
                       </div>
 
                       <div className="mt-4 pt-4 border-t bg-background">
-                        <Button
-                          onClick={handleSubmitQuestions}
-                          disabled={isSubmittingQuestions}
-                          className="w-full"
-                          variant="secondary"
-                        >
-                          {isSubmittingQuestions ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Submitting...
-                            </>
-                          ) : (
-                            <>
-                              <Send className="w-4 h-4 mr-2" />
-                              Submit additional information
-                            </>
-                          )}
-                        </Button>
-                      </div>
+                    <Button
+                      onClick={handleSubmitQuestions}
+                      disabled={isSubmittingQuestions}
+                      className="w-full"
+                      variant="secondary"
+                    >
+                      {isSubmittingQuestions ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Submit additional information
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
                     </div>
                   </ScrollArea>
+
+
                 </>
               ) : (
                 <div className="flex items-center justify-center h-32 text-muted-foreground">
@@ -667,153 +575,65 @@ export default function Component() {
 
           <TabsContent value="resume" className="flex-1 m-0">
             <div className="p-4">
-              {showManageResumes ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">Manage Resumes</h3>
-                    <Button variant="outline" size="sm" onClick={() => setShowManageResumes(false)}>
-                      Back to Resume
-                    </Button>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="p-4 border rounded-lg">
-                      <h4 className="font-medium mb-2">Save Current Resume</h4>
-                      <div className="space-y-2">
-                        <Button
-                          onClick={handleSaveAsDefault}
-                          disabled={(!tailoredMarkdown && !initialResume) || isManagingResume}
-                          className="w-full bg-transparent"
-                          variant="outline"
-                        >
-                          {isManagingResume ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                          Save as Default Resume
-                        </Button>
-
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Custom name (will add .txt)"
-                            value={customResumeName}
-                            onChange={(e) => setCustomResumeName(e.target.value)}
-                            className="flex-1"
-                          />
-                          <Button
-                            onClick={handleSaveWithCustomName}
-                            disabled={
-                              !customResumeName.trim() || (!tailoredMarkdown && !initialResume) || isManagingResume
-                            }
-                            variant="outline"
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-4 border rounded-lg">
-                      <h4 className="font-medium mb-2">Saved Resumes</h4>
-                      <ScrollArea className="h-[300px]">
-                        {savedResumes.length > 0 ? (
-                          <div className="space-y-2">
-                            {savedResumes.map((filename, index) => (
-                              <div key={index} className="flex items-center justify-between p-2 border rounded">
-                                <span className="text-sm">{filename}</span>
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleLoadResume(filename)}
-                                    disabled={isManagingResume}
-                                  >
-                                    Load
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleDeleteResume(filename)}
-                                    disabled={isManagingResume}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    Delete
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No saved resumes found</p>
-                        )}
-                      </ScrollArea>
-                    </div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="redline-toggle" className="text-sm font-medium">
+                      Redline
+                    </Label>
+                    <Switch id="redline-toggle" checked={showRedlines} onCheckedChange={setShowRedlines} />
                   </div>
                 </div>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="redline-toggle" className="text-sm font-medium">
-                          Redline
-                        </Label>
-                        <Switch id="redline-toggle" checked={showRedlines} onCheckedChange={setShowRedlines} />
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setShowManageResumes(true)}>
-                        Manage Resumes
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCopyMarkdown}
-                        disabled={!tailoredMarkdown && !initialResume}
-                        className={copyFeedback ? "bg-green-50 border-green-300" : ""}
-                      >
-                        <Copy className="w-4 h-4 mr-1" />
-                        {copyFeedback ? "Copied!" : "Copy Clean"}
-                      </Button>
-                      {/* Download button removed */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyMarkdown}
+                    disabled={!tailoredMarkdown && !initialResume}
+                    className={copyFeedback ? "bg-green-50 border-green-300" : ""}
+                  >
+                    <Copy className="w-4 h-4 mr-1" />
+                    {copyFeedback ? "Copied!" : "Copy Clean"}
+                  </Button>
+                  {/* Download button removed */}
+                </div>
+              </div>
+
+              <ScrollArea className="h-[calc(100vh-150px)]">
+                {isLoadingResume ? (
+                  <div className="flex items-center justify-center h-32">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Loading resume...</p>
                     </div>
                   </div>
+                ) : tailoredMarkdown || initialResume ? (
+                  <div className="bg-white p-6 text-base text-s">
+                     {showResumeTooltip && (
+                    <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
+                      My suggestions are in redline. Hover over{" "}
+                      <span className="text-red-600 line-through">red strikethrough</span> or{" "}
+                      <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit changes
+                      <br />
+                    </Tooltip>
+                      )}
 
-                  <ScrollArea className="h-[calc(100vh-150px)]">
-                    {isLoadingResume ? (
-                      <div className="flex items-center justify-center h-32">
-                        <div className="text-center">
-                          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground">Loading resume...</p>
-                        </div>
-                      </div>
-                    ) : tailoredMarkdown || initialResume ? (
-                      <div className="bg-white p-6 text-base text-s">
-                        {showResumeTooltip && (
-                          <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
-                            My suggestions are in redline. Hover over{" "}
-                            <span className="text-red-600 line-through">red strikethrough</span> or{" "}
-                            <span className="text-green-600 font-medium">green text</span> to accept, reject, or edit
-                            changes
-                            <br />
-                          </Tooltip>
-                        )}
-
-                        <div className="pb-8">
-                          <ResumeRenderer
-                            markdown={tailoredMarkdown || initialResume}
-                            showRedlines={showRedlines}
-                            onAcceptChange={handleAcceptChange}
-                            onRejectChange={handleRejectChange}
-                            onEditChange={handleEditChange}
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-32 text-muted-foreground">
-                        <p className="text-s">No resume available</p>
-                      </div>
-                    )}
-                  </ScrollArea>
-                </>
-              )}
+                <div className="pb-8">
+                 <ResumeRenderer
+                      markdown={tailoredMarkdown || initialResume}
+                      showRedlines={showRedlines}
+                      onAcceptChange={handleAcceptChange}
+                      onRejectChange={handleRejectChange}
+                      onEditChange={handleEditChange}
+                    />
+                  </div>
+                </div>
+                ) : (
+                  <div className="flex items-center justify-center h-32 text-muted-foreground">
+                    <p className="text-s">No resume available</p>
+                  </div>
+                )}
+              </ScrollArea>
             </div>
           </TabsContent>
 
@@ -825,8 +645,7 @@ export default function Component() {
               </div>
               <div className="flex items-center justify-center text-muted-foreground h-6">
                 <p className="text-sm">
-                  To make it easier and quicker to apply to jobs, I'm working on being able fill out the application for
-                  you... under your supervision!
+                  To make it easier and quicker to apply to jobs, I'm working on being able fill out the application for you... under your supervision! 
                 </p>
               </div>
             </div>
@@ -839,10 +658,7 @@ export default function Component() {
                 <span className="text-sm font-medium">Feature coming soon</span>
               </div>
               <div className="flex items-center justify-center text-muted-foreground h-6">
-                <p className="text-sm">
-                  To make it easier to network into this job, I'm working on showing you your 1st and 2nd degree
-                  LinkedIn contacts at this company!
-                </p>
+                <p className="text-sm">To make it easier to network into this job, I'm working on showing you your 1st and 2nd degree LinkedIn contacts at this company!</p>
               </div>
             </div>
           </TabsContent>
@@ -850,4 +666,5 @@ export default function Component() {
       )}
     </div>
   )
+  
 }
