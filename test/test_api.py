@@ -14,6 +14,15 @@ TEST_RESUME_FILE = BASE_DIR / "user" / "test_resume.txt"
 TEST_ADDITIONAL_EXPERIENCE_FILE = BASE_DIR / "user" / "test_additional_experience.txt"
 TEST_OUTPUT_FROM_LLM_CURRENT_FILE = BASE_DIR / "temp_stub" / "test_LLM_response_current.json"
 TEST_USER_RESPONSE_FILE = BASE_DIR / "temp_stub" / "test_user_response.json"
+# Production temp files
+TEMP_DIR = BASE_DIR.parent / "temp"
+RESUME_BASELINE_FILE = TEMP_DIR / "resume_baseline.txt"
+RESUME_REVISED_FILE = TEMP_DIR / "resume_revised.txt"
+USER_RESPONSE_FILE = TEMP_DIR / "user_response.json"
+OUTPUT_FROM_LLM_PRIOR_FILE = TEMP_DIR / "LLM_response_prior.json"
+OUTPUT_FROM_LLM_CURRENT_FILE = TEMP_DIR / "LLM_response_current.json"
+JOB_DESCRIPTION_FILE = TEMP_DIR / "job_description.txt"
+
 
 @pytest.fixture
 def test_client():
@@ -28,14 +37,26 @@ def test_client():
     api.app.dependency_overrides.clear()
 
 
+def test_init_temp_folder_and_files(test_client):
+    """Test that temp folder and files are created."""
+    assert TEMP_DIR.exists()
+    assert RESUME_BASELINE_FILE.exists()
+    assert JOB_DESCRIPTION_FILE.exists()
+    assert not OUTPUT_FROM_LLM_CURRENT_FILE.exists()
+    assert not OUTPUT_FROM_LLM_PRIOR_FILE.exists()
+    assert not RESUME_REVISED_FILE.exists()
+    assert not USER_RESPONSE_FILE.exists()
+
+
 def test_get_job_description(test_client):
-    """Test /get_JD endpoint returns (currently stubbed) job description."""
+    """Test /get_JD endpoint returns (currently demo) job description."""
     response = test_client.post(
         "/jobdescription",
         json={"url": "https://example.com/job"}
     )
     assert response.status_code == 200
     data_dict = response.json()
+    # check that content from demo job description file is returned
     assert "CEO/Co-founder" in data_dict["job_description"]
 
 
@@ -65,11 +86,13 @@ def test_create_review_prompt(monkeypatch):
     monkeypatch.setattr(api, "USER_RESPONSE_FILE", TEST_USER_RESPONSE_FILE)
     prompt = api.create_review_prompt(job_description)
 
+    # test that placeholder is replaced with json content
     assert "{{INPUT}}" not in prompt
+    # test that user data is read and injected correctly
     assert resume in prompt
     assert additional_experience in prompt
     assert job_description in prompt
-    # test whether data from previous LLM output is parsed and injected
+    # test that data from previous LLM output is parsed and injected
     assert rationale in prompt
     assert question2 in prompt
     assert answer3 in prompt
@@ -89,15 +112,16 @@ def test_generate_review_demo(test_client, monkeypatch):
     assert response.status_code == 200
     data_dict = response.json()
     assert "Tailored_Resume" in data_dict
+    # check that content from demo LLM response file is returned
     assert "Chung Meng Cheong" in data_dict["Tailored_Resume"]
 
 
 def test_generate_review(test_client, monkeypatch):
     """Test /generate/review endpoint parses the LLM response and injects
     a diff resume."""
-    def mock_prompt_LLM(prompt: str) -> str:
+    def mock_prompt_llm(prompt: str) -> str:
         return TEST_OUTPUT_FROM_LLM_CURRENT_FILE.read_text()
-    monkeypatch.setattr(api, "prompt_LLM", mock_prompt_LLM)
+    monkeypatch.setattr(api, "prompt_llm", mock_prompt_llm)
 
     response = test_client.post(
         "/review",
@@ -109,6 +133,7 @@ def test_generate_review(test_client, monkeypatch):
     )
     assert response.status_code == 200
     data_dict = response.json()
+    # check that content from test LLM response (mock_prompt_llm)file is returned
     assert data_dict["Fit"]["score"] == 10
     assert data_dict["Gap_Map"][1]["JD Requirement/Keyword"] == "Test Requirement1"
 
@@ -127,6 +152,7 @@ def test_process_questions_and_answers_demo(test_client, monkeypatch):
     )
     assert response.status_code == 200
     data_dict = response.json()
+    # check that content from demo LLM response file is returned
     assert data_dict["Fit"]["score"] == 8
     assert data_dict["Questions"][0] == "Have you personally led or closed a seed or Series A round? If yes, list round (seed/Series A), amount, year, and your role (lead/co-founder/executive)."
 
@@ -146,4 +172,5 @@ def test_manage_resume(test_client, monkeypatch):
         params={"command": "load"})
     assert response.status_code == 200
     data_dict = response.json()
+    # check that content from test resume file is returned
     assert data_dict["resume"] == resume

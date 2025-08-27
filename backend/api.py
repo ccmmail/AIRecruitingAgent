@@ -1,8 +1,8 @@
 """API for generating a resume review and changes tailored to a given job description."""
 
 from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from openai import OpenAI
 from langsmith import traceable, Client
@@ -41,13 +41,35 @@ RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = DEMO_DIR / "API_response_review_add_info_de
 RESPONSE_REVIEW_DEMO_FILE = DEMO_DIR / "API_response_review_demo.json"
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Setup temp working directory on startup."""
+    ## startup items
+    # make temp directory
+    TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    # copy the user's saved resume.txt into temp directory as the baseline
+    shutil.copyfile(RESUME_FILE, RESUME_BASELINE_FILE)
+    # Make the demo job description the working job description
+    shutil.copyfile(JOB_DESCRIPTION_DEMO_FILE, JOB_DESCRIPTION_FILE)
+    # delete temp working files if they exist
+    try:
+        os.remove(OUTPUT_FROM_LLM_CURRENT_FILE)
+        os.remove(RESUME_REVISED_FILE)
+        os.remove(USER_RESPONSE_FILE)
+        os.remove(OUTPUT_FROM_LLM_PRIOR_FILE)
+    except FileNotFoundError:
+        pass
+    yield
+    ## cleanup items
+    ## none for now
+
 # Initialize the FastAPI application
-app = FastAPI(debug=True)
+app = FastAPI(debug=True, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[ # In production, restrict to specific origins
         "chrome-extension://oblgighcolckndbinadplmmmebjemido",
-        "localhost"
+        # "localhost"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -60,24 +82,6 @@ os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
 langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
 
 
-@app.on_event("startup")
-async def startup():
-    """Setup temp working directory."""
-    TEMP_DIR.mkdir(parents=True, exist_ok=True)
-    # make the user's saved resume.txt the new baseline
-    shutil.copyfile(RESUME_FILE, RESUME_BASELINE_FILE)
-    # Make the demo job description the working job description
-    shutil.copyfile(JOB_DESCRIPTION_DEMO_FILE, JOB_DESCRIPTION_FILE)
-    # delete temp working files if they exist
-    try:
-        os.remove(OUTPUT_FROM_LLM_CURRENT_FILE)
-        os.remove(RESUME_REVISED_FILE)
-        os.remove(USER_RESPONSE_FILE)
-        os.remove(OUTPUT_FROM_LLM_PRIOR_FILE)
-    except FileNotFoundError:
-        pass
-
-
 @app.get("/")
 def show_heartbeat():
     """Return a message to show API is up."""
@@ -85,7 +89,7 @@ def show_heartbeat():
 
 
 @traceable(name="prompt_LLM")
-def prompt_LLM(prompt: str) -> str:
+def prompt_llm(prompt: str) -> str:
     """Call OpenAI API to get a response."""
     response = LLM.chat.completions.create(
         model="gpt-5-mini",
@@ -102,14 +106,14 @@ def create_resume_diff(baseline:str, revised:str) -> str:
     return redline_diff(baseline, revised)
 
 
-class URL(BaseModel):
+class Url(BaseModel):
     """Define the shape of data expected by /jobdescription."""
     url: str  # URL of the page requesting the job description
     demo: bool = False   # if true, return static demo response
 
 
 @app.post("/jobdescription")
-def get_job_description_from_URL(url:URL):
+def get_job_description_from_url(url:Url):
     """Fetch job description from URL."""
     # TODO: Implement logic to fetch job description based on URL vs. canned response
     job_description = JOB_DESCRIPTION_FILE.read_text()
@@ -124,9 +128,9 @@ def create_review_prompt(job_description: str) -> str:
         "Additional_Info": ADDITIONAL_EXPERIENCE_FILE.read_text()
     }
     if OUTPUT_FROM_LLM_CURRENT_FILE.exists():
-        LLM_response = json.loads(OUTPUT_FROM_LLM_CURRENT_FILE.read_text())
-        input_dict["Fit"] = LLM_response.get("Fit")
-        input_dict["Gap_Map"] = LLM_response.get("Gap_Map")
+        llm_response = json.loads(OUTPUT_FROM_LLM_CURRENT_FILE.read_text())
+        input_dict["Fit"] = llm_response.get("Fit")
+        input_dict["Gap_Map"] = llm_response.get("Gap_Map")
     if USER_RESPONSE_FILE.exists():
         input_dict["qa_pairs"] = json.loads(USER_RESPONSE_FILE.read_text())
 
@@ -164,15 +168,15 @@ def generate_review(job_listing: JobListing):
 
     # get the LLM response
     prompt = create_review_prompt(job_listing.job_description)
-    LLM_response_json = prompt_LLM(prompt)
+    llm_response_json = prompt_llm(prompt)
 
     # rotate the files to keep the last two LLM responses
     if OUTPUT_FROM_LLM_CURRENT_FILE.exists():
         os.replace(OUTPUT_FROM_LLM_CURRENT_FILE, OUTPUT_FROM_LLM_PRIOR_FILE)
-    OUTPUT_FROM_LLM_CURRENT_FILE.write_text(LLM_response_json)
+    OUTPUT_FROM_LLM_CURRENT_FILE.write_text(llm_response_json)
 
     # diff the baseline and revised resumes, and save the diff in the API response
-    response = json.loads(LLM_response_json)
+    response = json.loads(llm_response_json)
     revised_resume = response["Tailored_Resume"]
     RESUME_REVISED_FILE.write_text(revised_resume)  # save revised resume
     baseline_resume = RESUME_BASELINE_FILE.read_text()
