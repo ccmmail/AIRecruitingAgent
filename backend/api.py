@@ -21,6 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 USER_DIR = BASE_DIR / "user"
 PROMPT_DIR = BASE_DIR / "prompts"
 TEMP_DIR = BASE_DIR / "temp"
+DEMO_DIR = BASE_DIR / "demo"
 # User data
 RESUME_FILE = USER_DIR / "resume.txt"
 ADDITIONAL_EXPERIENCE_FILE = USER_DIR / "additional_candidate_info.txt"
@@ -35,16 +36,19 @@ OUTPUT_FROM_LLM_PRIOR_FILE = TEMP_DIR / "LLM_response_prior.json"
 OUTPUT_FROM_LLM_CURRENT_FILE = TEMP_DIR / "LLM_response_current.json"
 JOB_DESCRIPTION_FILE = TEMP_DIR / "job_description.txt"
 # Demo files
-JOB_DESCRIPTION_DEMO_FILE = TEMP_DIR / "job_description_demo.txt"
-RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = TEMP_DIR / "API_response_review_add_info_demo.json"
-RESPONSE_REVIEW_DEMO_FILE = TEMP_DIR / "API_response_review_demo.json"
+JOB_DESCRIPTION_DEMO_FILE = DEMO_DIR / "job_description_demo.txt"
+RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = DEMO_DIR / "API_response_review_add_info_demo.json"
+RESPONSE_REVIEW_DEMO_FILE = DEMO_DIR / "API_response_review_demo.json"
 
 
 # Initialize the FastAPI application
 app = FastAPI(debug=True)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["chrome-extension://<YOUR_EXTENSION_ID>"],  # In production, restrict to specific origins
+    allow_origins=[ # In production, restrict to specific origins
+        "chrome-extension://oblgighcolckndbinadplmmmebjemido",
+        "localhost"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["Authorization", "Content-Type"],
@@ -54,6 +58,24 @@ LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
 langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
+
+
+@app.on_event("startup")
+async def startup():
+    """Setup temp working directory."""
+    TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    # make the user's saved resume.txt the new baseline
+    shutil.copyfile(RESUME_FILE, RESUME_BASELINE_FILE)
+    # Make the demo job description the working job description
+    shutil.copyfile(JOB_DESCRIPTION_DEMO_FILE, JOB_DESCRIPTION_FILE)
+    # delete temp working files if they exist
+    try:
+        os.remove(OUTPUT_FROM_LLM_CURRENT_FILE)
+        os.remove(RESUME_REVISED_FILE)
+        os.remove(USER_RESPONSE_FILE)
+        os.remove(OUTPUT_FROM_LLM_PRIOR_FILE)
+    except FileNotFoundError:
+        pass
 
 
 @app.get("/")
@@ -87,24 +109,10 @@ class URL(BaseModel):
 
 
 @app.post("/jobdescription")
-def get_job_description_from_URL(url:URL, user=Depends(get_current_user)):
-    """Setup temp working directory and fetch job description from URL."""
-    # make the user's saved resume.txt the new baseline
-    shutil.copyfile(RESUME_FILE, RESUME_BASELINE_FILE)
-    # Make the demo job description the working job description
-    shutil.copyfile(JOB_DESCRIPTION_DEMO_FILE, JOB_DESCRIPTION_FILE)
-    # delete temp working files if they exist
-    try:
-        os.remove(OUTPUT_FROM_LLM_CURRENT_FILE)
-        os.remove(RESUME_REVISED_FILE)
-        os.remove(USER_RESPONSE_FILE)
-        os.remove(OUTPUT_FROM_LLM_PRIOR_FILE)
-    except FileNotFoundError:
-        pass
-
+def get_job_description_from_URL(url:URL):
+    """Fetch job description from URL."""
     # TODO: Implement logic to fetch job description based on URL vs. canned response
     job_description = JOB_DESCRIPTION_FILE.read_text()
-
     return {"job_description": job_description}
 
 
@@ -139,7 +147,7 @@ class JobListing(BaseModel):
 
 @app.post("/review")
 @traceable(name="generate_review_endpoint")
-def generate_review(job_listing: JobListing, user=Depends(get_current_user)):
+def generate_review(job_listing: JobListing):
     """Generate a review and tailored resume based on the job description.
     Algo:
     1. If demo is true, return canned response
@@ -161,7 +169,7 @@ def generate_review(job_listing: JobListing, user=Depends(get_current_user)):
     # rotate the files to keep the last two LLM responses
     if OUTPUT_FROM_LLM_CURRENT_FILE.exists():
         os.replace(OUTPUT_FROM_LLM_CURRENT_FILE, OUTPUT_FROM_LLM_PRIOR_FILE)
-    OUTPUT_FROM_LLM_PRIOR_FILE.write_text(LLM_response_json)
+    OUTPUT_FROM_LLM_CURRENT_FILE.write_text(LLM_response_json)
 
     # diff the baseline and revised resumes, and save the diff in the API response
     response = json.loads(LLM_response_json)
@@ -181,7 +189,7 @@ class QuestionAnswers(BaseModel):
 
 @app.post("/questions")
 @traceable(name="process_questions_and_answers_endpoint")
-def process_questions_and_answers(user_response: QuestionAnswers, user=Depends(get_current_user)):
+def process_questions_and_answers(user_response: QuestionAnswers):
     """Generate an updated review and resume based on candidate's answers.
     Algo:
     1. If demo is true, return canned response
@@ -207,7 +215,7 @@ def process_questions_and_answers(user_response: QuestionAnswers, user=Depends(g
 
 
 @app.get("/resume")
-def manage_resume(command:str, user=Depends(get_current_user)):
+def manage_resume(command:str):
     """Return the user's saved resume."""
     if command == "load":
         response = {"resume": RESUME_FILE.read_text()}

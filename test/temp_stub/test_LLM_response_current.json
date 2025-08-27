@@ -1,0 +1,27 @@
+{
+    "Fit": {
+        "score": 10,
+        "rationale": "This is a test rationale"
+    },
+    "Gap_Map": [
+        {
+            "JD Requirement/Keyword": "Test Requirement0",
+            "Present in Resume?": "Partial",
+            "Where/Evidence": "Evidence0",
+            "Gap handling": "Gap0"
+        },
+        {
+            "JD Requirement/Keyword": "Test Requirement1",
+            "Present in Resume?": "No",
+            "Where/Evidence": "Evidence1",
+            "Gap handling": "Gap1"
+        }
+    ],
+    "Questions": [
+        "Question1",
+        "Question2",
+        "Question3",
+        "What else should I know about you and this job?"
+    ],
+    "Tailored_Resume": "This should be replaced by <TEST_RESUME>"
+}
