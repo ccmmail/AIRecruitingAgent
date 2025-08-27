@@ -26,5 +26,6 @@
       "resources": ["panel.html", "next-static/*"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuOI+q/RDFWU7/H5Q2SA1WZ6FYvok7ci69awO9YLlxz6luK0+0auG5eOT64fDDGKyQziaWidgOwTuo/Yc/0VvlIcDdAsFLz+0jJX71HKK20LyPbCEOHULzH+D2k4tv/6V5p98WLm+TlPHTdV93e1PUgCPiFCsp74CBOHkDC3AuYAS+1VVIij56weY6s1dR6i+ERhd3ZGFTUa8WIt9xhKXQWwYJkheaRupqwuOSBotPcCBvTvb99XTapFoQnMVrITZREhiWgzvWRTkSXrhbyv5FF8/QFlTdic9QlLs1XpmdnxwdL1SgM5BxhIpYWq+6VjLQzcLEzcb2VMlrW7UXQ3kAQIDAQAB"
 }
