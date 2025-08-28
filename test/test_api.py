@@ -8,7 +8,8 @@ import time
 from backend.utils import verify_token
 get_current_user = verify_token  # alias for clarity
 
-# Define the directory paths for the working files for test environment
+
+# Working files for pytest unit tests
 BASE_DIR = Path(__file__).resolve().parent
 TEST_RESUME_FILE = BASE_DIR / "user" / "test_resume.txt"
 TEST_ADDITIONAL_EXPERIENCE_FILE = BASE_DIR / "user" / "test_additional_experience.txt"

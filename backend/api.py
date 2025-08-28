@@ -41,6 +41,13 @@ RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = DEMO_DIR / "API_response_review_add_info_de
 RESPONSE_REVIEW_DEMO_FILE = DEMO_DIR / "API_response_review_demo.json"
 
 
+# Initialize OpenAI client and LangSmith tracer
+LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+os.environ["LANGSMITH_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
+langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
+
+# Start the FastAPI app by setting up temp dir & working files
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Setup temp working directory on startup."""
@@ -60,10 +67,10 @@ async def lifespan(app: FastAPI):
     except FileNotFoundError:
         pass
     yield
-    ## cleanup items
+    ## cleanup items here
     ## none for now
 
-# Initialize the FastAPI application
+
 app = FastAPI(debug=True, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
@@ -75,11 +82,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["Authorization", "Content-Type"],
 )
-# Initialize OpenAI client and LangSmith tracer
-LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-os.environ["LANGSMITH_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
-langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
 
 
 @app.get("/")
