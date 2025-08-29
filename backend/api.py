@@ -1,4 +1,4 @@
-"""API for generating a resume review and changes tailored to a given job description."""
+"""APIs for generating a resume review and changes tailored to a given job description."""
 
 from fastapi import FastAPI, Depends
 from starlette.middleware.cors import CORSMiddleware
@@ -10,8 +10,10 @@ from pathlib import Path
 import os, shutil
 import json
 from dotenv import load_dotenv
-from .utils import redline_diff, verify_token
-get_current_user = verify_token  # alias for clarity
+from .utils import redline_diff
+from .security import verify_token, require_user
+# get_current_user = verify_token  # alias for clarity and for unit tests override
+get_authorized_user = verify_token  # alias for clarity and for unit tests override
 
 
 # Load environment variables from .env file
@@ -195,7 +197,8 @@ class QuestionAnswers(BaseModel):
 
 @app.post("/questions")
 @traceable(name="process_questions_and_answers_endpoint")
-def process_questions_and_answers(user_response: QuestionAnswers):
+def process_questions_and_answers(user_response: QuestionAnswers,
+                                  user=Depends(get_authorized_user)):
     """Generate an updated review and resume based on candidate's answers.
     Algo:
     1. If demo is true, return canned response

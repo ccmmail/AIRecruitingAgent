@@ -4,9 +4,8 @@ import pytest
 from backend import api
 from fastapi.testclient import TestClient
 from pathlib import Path
-import time
-from backend.utils import verify_token
-get_current_user = verify_token  # alias for clarity
+from backend.security import verify_token
+get_authorized_user = verify_token  # alias for clarity
 
 
 # Working files for pytest unit tests
@@ -28,7 +27,7 @@ JOB_DESCRIPTION_FILE = TEMP_DIR / "job_description.txt"
 @pytest.fixture
 def test_client():
     """Create a test client for the FastAPI app."""
-    api.app.dependency_overrides[get_current_user] = lambda: {
+    api.app.dependency_overrides[get_authorized_user] = lambda: {
         "sub": "test-user-123",
         "email": "test@example.com",
         "name": "Test User",
@@ -149,7 +148,7 @@ def test_process_questions_and_answers_demo(test_client, monkeypatch):
                 {"question": "Question2?", "answer": "Answer2"}
             ],
             "demo": True
-        }
+        },
     )
     assert response.status_code == 200
     data_dict = response.json()
@@ -161,6 +160,7 @@ def test_process_questions_and_answers_demo(test_client, monkeypatch):
 def test_process_questions_and_answers(test_client, monkeypatch):
     """Test /questions endpoint creates an updated review off user's answers."""
     # TODO: Implement a non-demo test once we have a suitable stubbed LLM response file
+    assert False
     return
 
 

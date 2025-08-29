@@ -1,53 +1,6 @@
 """Redline Diff Module with custom <add> and <del> tags."""
 import re
 from difflib import SequenceMatcher
-import json, time, urllib.request
-from functools import lru_cache
-from typing import Dict, Any
-from jose import jwt
-from fastapi import HTTPException, Security, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
-# OIDC settings for token validation
-ISSUER = "https://accounts.google.com"  # if tokens issued directly by Google
-AUDIENCE = "https://ai-recruiting-agent.pythonanywhere.com"  # your API audience / client_id as configured
-JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
-ALGORITHMS = ["RS256"]
-security = HTTPBearer(auto_error=True)
-
-
-@lru_cache(maxsize=1)
-def _jwks() -> Dict[str, Any]:
-    with urllib.request.urlopen(JWKS_URL, timeout=5) as r:
-        return json.loads(r.read().decode("utf-8"))
-
-def _key_for(kid: str) -> Dict[str, Any]:
-    for k in _jwks().get("keys", []):
-        if k.get("kid") == kid:
-            return k
-    raise HTTPException(status_code=401, detail="Invalid token key id")
-
-def verify_token(creds: HTTPAuthorizationCredentials = Security(security)) -> Dict[str, Any]:
-    token = creds.credentials
-    try:
-        headers = jwt.get_unverified_header(token)
-        key = _key_for(headers["kid"])
-        claims = jwt.decode(
-            token,
-            key,
-            algorithms=ALGORITHMS,
-            audience=AUDIENCE,
-            issuer=ISSUER,
-        )
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    if claims.get("exp", 0) < time.time():
-        raise HTTPException(status_code=401, detail="Token expired")
-    return claims
-
-
-
-
 def _tokenize(text: str):
     """
     Split into words, punctuation, and whitespace — while preserving all
