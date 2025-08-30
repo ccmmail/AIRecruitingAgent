@@ -1,4 +1,51 @@
-/// <reference types="chrome"/>
+// Remove the Chrome reference type as it's causing build issues
+// Instead we'll use a declaration file
+
+// Safely detect Chrome extension environment - use a function to prevent build-time errors
+function isChromeExtension(): boolean {
+  try {
+    return typeof window !== 'undefined' &&
+           typeof (window as any).chrome !== 'undefined' &&
+           typeof (window as any).chrome.runtime !== 'undefined' &&
+           typeof (window as any).chrome.runtime.id === 'string';
+  } catch {
+    return false;
+  }
+}
+
+// // Get redirect URI safely
+// function getRedirectUri(): string {
+//   try {
+//     if (typeof window !== 'undefined' && (window as any).chrome?.identity) {
+//       return (window as any).chrome.identity.getRedirectURL('oauth2_cb');
+//     }
+//   } catch {
+//     // Ignore errors during build time
+//   }
+//   return `${typeof window !== 'undefined' ? window.location.origin : ''}/auth-callback.html`;
+// }
+
+// Authentication configuration
+const CHROME_EXTENSION_CLIENT_ID =
+  '547680597044-eefahq1bkcjj58b1shpa627q6ju0ssac.apps.googleusercontent.com';
+
+export const AUTH_CONFIG = {
+  clientId: CHROME_EXTENSION_CLIENT_ID,              // <- explicit, no manifest dependency
+  authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+  scope: 'email profile',
+  responseType: 'token id_token',
+  // ⚠ remove redirectUri from here to avoid accidental use
+};
+
+// Auth token storage key
+const TOKEN_STORAGE_KEY = "ai_recruiting_agent_auth";
+
+// Auth token interface
+interface AuthToken {
+  accessToken: string;
+  idToken: string;
+  expiresAt: number;
+}
 
 function getBackendUrl(): string {
   // Try to get from window (injected during build)
@@ -7,6 +54,239 @@ function getBackendUrl(): string {
   }
   // Fallback to environment variable
   return process.env.BACKEND_URL || "http://localhost:8000"
+}
+
+// Get stored auth token
+export async function getAuthToken(): Promise<AuthToken | null> {
+  try {
+    if (isChromeExtension() && (window as any).chrome?.storage) {
+      return new Promise((resolve) => {
+        (window as any).chrome.storage.local.get(TOKEN_STORAGE_KEY, (result: any) => {
+          const token = result[TOKEN_STORAGE_KEY];
+          if (token && token.expiresAt > Date.now()) {
+            resolve(token);
+          } else {
+            resolve(null);
+          }
+        });
+      });
+    }
+  } catch {
+    // Ignore errors during build time
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      const tokenStr = localStorage.getItem(TOKEN_STORAGE_KEY);
+      if (!tokenStr) return null;
+
+      const token = JSON.parse(tokenStr);
+      if (token && token.expiresAt > Date.now()) {
+        return token;
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+  }
+  return null;
+}
+
+// Save auth token
+export async function saveAuthToken(token: AuthToken): Promise<void> {
+  try {
+    if (isChromeExtension() && (window as any).chrome?.storage) {
+      return new Promise((resolve) => {
+        (window as any).chrome.storage.local.set({ [TOKEN_STORAGE_KEY]: token }, resolve);
+      });
+    }
+  } catch {
+    // Ignore errors during build time
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(token));
+    } catch {
+      // Ignore localStorage errors
+    }
+  }
+}
+
+// Clear auth token
+export async function clearAuthToken(): Promise<void> {
+  try {
+    if (isChromeExtension() && (window as any).chrome?.storage) {
+      return new Promise((resolve) => {
+        (window as any).chrome.storage.local.remove(TOKEN_STORAGE_KEY, resolve);
+      });
+    }
+  } catch {
+    // Ignore errors during build time
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+    } catch {
+      // Ignore localStorage errors
+    }
+  }
+}
+
+// Initiate Google OAuth login
+
+function rand(n = 24): string {
+  const arr = new Uint8Array(n);
+  crypto.getRandomValues(arr);
+  return btoa(String.fromCharCode(...arr))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+
+export async function login(): Promise<AuthToken | null> {
+  try {
+    if (isChromeExtension() && (window as any).chrome?.identity) {
+      // Choose ONE redirect URI (try B first; flip to A if Google still mismatches)
+      // const redirectUriA = (window as any).chrome.identity.getRedirectURL();            // https://<id>.chromiumapp.org/
+      // const redirectUriB = (window as any).chrome.identity.getRedirectURL("oauth2_cb"); // https://<id>.chromiumapp.org/oauth2_cb
+      // const useB = false; // set false to try the root URL
+      // const redirectUri = useB ? redirectUriB : redirectUriA;
+        const redirectUri = "https://airecruitingagent.pythonanywhere.com/oauth2cb";
+
+      // Hard-code client id to avoid manifest/env fallbacks during debug
+      const CLIENT_ID = "258289407737-mdh4gleu91oug8f5g8jqkt75f62te9kv.apps.googleusercontent.com"; // for airecruitingagent.pythonanywhere.com
+      // Required when requesting id_token
+      const state = rand();
+      const nonce = rand();
+
+      // Sanity checks & debug
+      console.log("[OAuth] runtime.id:", (window as any).chrome.runtime.id);
+      console.log("[OAuth] using redirectUri:", redirectUri);
+      console.log("[OAuth] client_id:", CLIENT_ID);
+
+      // Build the auth URL ONCE
+      const params = new URLSearchParams({
+        client_id: CLIENT_ID,
+        redirect_uri: redirectUri,
+        response_type: "token id_token",
+        scope: "openid email profile",
+        prompt: "consent",
+        state,
+        nonce,
+      });
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+      console.log("[OAuth] authUrl:", authUrl);
+
+      // Launch flow
+      const responseUrl = await new Promise<string>((resolve, reject) => {
+        (window as any).chrome.identity.launchWebAuthFlow(
+          { url: authUrl, interactive: true },
+          (redirectedTo?: string) => {
+            console.log("[OAuth] redirectedTo:", redirectedTo);
+            if ((window as any).chrome.runtime.lastError) {
+              return reject(new Error((window as any).chrome.runtime.lastError.message));
+            }
+            if (!redirectedTo) return reject(new Error("No response URL returned from auth flow"));
+            resolve(redirectedTo);
+          }
+        );
+      });
+
+      // Parse fragment (#...)
+      const hash = (new URL(responseUrl)).hash.replace(/^#/, "");
+      const q = new URLSearchParams(hash);
+
+      // Handle errors first
+      const err = q.get("error");
+      if (err) {
+        const desc = q.get("error_description") || "";
+        console.error("[OAuth] error:", err, desc);
+        return null;
+      }
+
+      // Validate state
+      if (q.get("state") !== state) {
+        console.error("[OAuth] state mismatch");
+        return null;
+      }
+
+      const accessToken = q.get("access_token");
+      const idToken = q.get("id_token");
+      const expiresIn = q.get("expires_in");
+
+      if (!accessToken || !idToken || !expiresIn) {
+        console.error("Invalid authentication response:", { accessToken, idToken, expiresIn });
+        return null;
+      }
+
+      const expiresAt = Date.now() + parseInt(expiresIn, 10) * 1000;
+      const token = { accessToken, idToken, expiresAt };
+      await saveAuthToken(token);
+      return token;
+    }
+  } catch (e) {
+    console.error("Login error:", e);
+  }
+
+  // Optional non-extension fallback (can be removed if unused)
+  if (typeof window !== "undefined") {
+    // This branch should rarely run in an extension context
+    const fallbackRedirect = AUTH_CONFIG.redirectUri ?? "/";
+    const params = new URLSearchParams({
+      client_id: AUTH_CONFIG.clientId,
+      redirect_uri: fallbackRedirect,
+      response_type: "token id_token",
+      scope: AUTH_CONFIG.scope,
+      prompt: "consent",
+    });
+    window.location.href = `${AUTH_CONFIG.authUrl}?${params.toString()}`;
+  }
+  return null;
+}
+
+// Logout
+export async function logout(): Promise<void> {
+  await clearAuthToken();
+}
+
+// Create a completely new function with a different name
+export async function checkUserAuthentication(): Promise<boolean> {
+  try {
+    const token = await getAuthToken();
+    // Use direct return of comparison result
+    return token !== null;
+  } catch (error) {
+    console.error("Authentication check failed:", error);
+    return false;
+  }
+}
+
+// Keep the old function but clearly mark it as a function type
+export const isAuthenticated = async (): Promise<boolean> => {
+    try {
+        const token = await getAuthToken();
+        return token !== null;
+    } catch (error) {
+        console.error("Authentication check failed:", error);
+        return false;
+    }
+};
+// Helper to add auth token to fetch options
+async function addAuthHeader(options: RequestInit = {}): Promise<RequestInit> {
+  const token = await getAuthToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+
+  return {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${token.idToken}`,
+    },
+  };
 }
 
 export async function postReview({
@@ -68,7 +348,8 @@ export async function postQuestions({
   const timeoutId = setTimeout(() => controller.abort(), 150000) // 150s timeout
 
   try {
-    const res = await fetch(`${base}/questions`, {
+    // Add authorization header
+    const fetchOptions = await addAuthHeader({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -76,11 +357,18 @@ export async function postQuestions({
         demo: demo || false
       }),
       signal: controller.signal,
-    })
+    });
+
+    const res = await fetch(`${base}/questions`, fetchOptions);
 
     clearTimeout(timeoutId)
 
     if (!res.ok) {
+      // Handle 401/403 auth errors specially
+      if (res.status === 401 || res.status === 403) {
+        await clearAuthToken(); // Clear invalid token
+        throw new Error("Authentication required. Please login again.");
+      }
       throw new Error(`HTTP ${res.status}`)
     }
 
@@ -154,15 +442,15 @@ export function cleanMarkdown(md: string): string {
 
 export async function getCurrentTabUrl(): Promise<string> {
   try {
-    if (typeof chrome !== "undefined" && chrome.tabs) {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-      return tab?.url || window.location.href
+    if (isChromeExtension() && (window as any).chrome?.tabs) {
+      const [tab] = await (window as any).chrome.tabs.query({ active: true, currentWindow: true });
+      return tab?.url || (typeof window !== "undefined" ? window.location.href : "");
     }
   } catch {
-    // Fallback for non-extension environment
+    // Fallback for non-extension environment or during build
   }
 
-  return window.location.href
+  return typeof window !== "undefined" ? window.location.href : "";
 }
 
 export async function getJobDescription({ url, demo }: { url: string; demo?: boolean }) {
@@ -195,7 +483,7 @@ export async function getJobDescription({ url, demo }: { url: string; demo?: boo
     console.log("[v0] getJobDescription - Fetch options:", fetchOptions)
     console.log("[v0] getJobDescription - Extension context check:", {
       isExtension: typeof chrome !== "undefined",
-      hasPermissions: typeof chrome !== "undefined" && chrome.permissions,
+      hasPermissions: typeof chrome !== "undefined" && typeof (chrome as any).permissions !== "undefined",
       userAgent: navigator.userAgent,
     })
 
@@ -214,7 +502,7 @@ export async function getJobDescription({ url, demo }: { url: string; demo?: boo
     const data = await res.json()
     console.log("[v0] getJobDescription - Success response:", data)
     return data
-  } catch (error) {
+  } catch (error: unknown) {
     clearTimeout(timeoutId)
     console.log("[v0] getJobDescription - Fetch error details:", {
       name: error instanceof Error ? error.name : "Unknown error",
@@ -222,7 +510,7 @@ export async function getJobDescription({ url, demo }: { url: string; demo?: boo
       stack: error instanceof Error ? error.stack : undefined,
     })
 
-    if (error.name === "TypeError" && error.message.includes("Failed to fetch")) {
+    if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
       console.log("[v0] getJobDescription - Likely CORS or network connectivity issue")
       console.log("[v0] getJobDescription - Check if backend server is running and CORS is configured")
     }

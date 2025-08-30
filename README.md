@@ -1,5 +1,8 @@
 ## AIRecruitingAgent
 
+### DevOps
+Need to deploy oauth2cb.py to airecruiting.pythonanywhere.com for login to work
+
 ### Sync changes from v0-dev branch → main/BrowserExtension/
 
 git checkout main

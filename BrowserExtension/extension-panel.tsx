@@ -10,10 +10,34 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { FileText, CheckCircle, AlertCircle, Linkedin, Loader2, Copy, Send } from "lucide-react"
-import { postReviewWithRetry, postQuestions, cleanMarkdown, getCurrentTabUrl, getJobDescription, manageResume } from "@/lib/api"
+import { FileText, CheckCircle, AlertCircle, Linkedin, Loader2, Copy, Send, LogIn, LogOut, User } from "lucide-react"
+import {
+  postReviewWithRetry,
+  postQuestions,
+  cleanMarkdown,
+  getCurrentTabUrl,
+  getJobDescription,
+  manageResume,
+  login,
+  logout,
+  isAuthenticated,
+  getAuthToken,
+    checkUserAuthentication
+} from "@/lib/api"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { Tooltip } from "@/components/tooltip"
+
+// Browser extension environment detection - use a function to prevent build-time errors
+function isBrowserExtension(): boolean {
+  try {
+    return typeof window !== 'undefined' &&
+           typeof (window as any).chrome !== 'undefined' &&
+           typeof (window as any).chrome.runtime !== 'undefined' &&
+           typeof (window as any).chrome.runtime.id === 'string';
+  } catch {
+    return false;
+  }
+}
 
 interface ReviewData {
   Tailored_Resume: string
@@ -46,7 +70,6 @@ export default function Component() {
   const [isSubmittingQuestions, setIsSubmittingQuestions] = useState(false)
   const [questionsSubmitted, setQuestionsSubmitted] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState(false)
-  // Remove downloadFeedback state since we're removing the download button
   const [showJDTooltip, setShowJDTooltip] = useState(true)
   const [showReviewTooltip, setShowReviewTooltip] = useState(true)
   const [showResumeTooltip, setShowResumeTooltip] = useState(true)
@@ -54,8 +77,79 @@ export default function Component() {
   const [demoState, setDemoState] = useState(true)
   const [initialResume, setInitialResume] = useState("")
   const [isLoadingResume, setIsLoadingResume] = useState(true)
+  // Authentication states
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticating, setIsAuthenticating] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+
+  // Safely check authentication only in client side
+  useEffect(() => {
+    // Skip authentication check during server-side rendering
+    if (typeof window === 'undefined') return;
+
+    const checkAuth = async () => {
+      try {
+        const authStatus = await checkUserAuthentication();
+        setIsAuthenticated(authStatus);
+
+        if (authStatus) {
+          const token = await getAuthToken();
+          if (token) {
+            try {
+              // Parse JWT to get user info
+              const tokenPayload = JSON.parse(atob(token.idToken.split('.')[1]));
+              setUserEmail(tokenPayload.email);
+            } catch (e) {
+              console.error("Error parsing token payload:", e);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const handleLogin = async () => {
+    setIsAuthenticating(true);
+    setAuthError(null);
+
+    try {
+      console.log("Starting login process...");
+      const result = await login();
+      if (result) {
+        console.log("Login successful. Token received:", result);
+        setIsAuthenticated(true);
+        const tokenPayload = JSON.parse(atob(result.idToken.split('.')[1]));
+        setUserEmail(tokenPayload.email);
+      } else {
+        console.error("Login failed: No result returned");
+        setAuthError("Login failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setAuthError(error instanceof Error ? error.message : "Authentication failed");
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setIsAuthenticated(false);
+    setUserEmail(null);
+  };
 
   useEffect(() => {
+    // Skip initialization during server-side rendering
+    if (typeof window === 'undefined') {
+      setIsInitialLoading(false);
+      return;
+    }
+
     const initializePanel = async () => {
       try {
         const url = await getCurrentTabUrl()
@@ -212,15 +306,21 @@ export default function Component() {
   }
 
   const handleSubmitQuestions = async () => {
-    if (!review?.Questions) return
+    if (!review?.Questions) return;
+
+    // Check if authenticated before submitting questions
+    if (!isAuthenticated) {
+      setError("Please login first to submit questions");
+      return;
+    }
 
     const qa_pairs = review.Questions.map((question, index) => ({
       question: question,
       answer: questionAnswers[index] || "",
-    }))
+    }));
 
-    setIsSubmittingQuestions(true)
-    setError(null)
+    setIsSubmittingQuestions(true);
+    setError(null);
 
     try {
       const result = await handleApiResponse(
@@ -228,18 +328,23 @@ export default function Component() {
           qa_pairs,
           demo: demoState
         })
-      )
+      );
 
       if (result) {
         // Clear the user input in the text fields after successful response
-        setQuestionAnswers({})
-        // Note: We're no longer setting questionsSubmitted to true
+        setQuestionAnswers({});
       }
-    } catch (err) {
-      console.log("[v0] Failed to submit questions:", err)
-      // Error already set by handleApiResponse
+    } catch (err: any) {
+      console.log("[v0] Failed to submit questions:", err);
+
+      // Handle auth errors specially
+      if (err?.message?.includes("Authentication required")) {
+        setIsAuthenticated(false);
+        setError("Authentication expired. Please login again.");
+      }
+      // Other errors handled by handleApiResponse
     } finally {
-      setIsSubmittingQuestions(false)
+      setIsSubmittingQuestions(false);
     }
   }
 
@@ -321,7 +426,35 @@ export default function Component() {
             <p className="text-xs text-muted-foreground">AI-Powered Job Application Helper</p>
           </div>
         </div>
-        <div className="text-xs bg-gray-100 px-2 py-1 rounded">Demo: {demoState ? "ON" : "OFF"}</div>
+        <div className="flex items-center gap-2">
+          {isAuthenticated ? (
+            <div className="flex items-center gap-2">
+              <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
+                <User className="w-3 h-3" />
+                <span className="max-w-[100px] truncate">{userEmail}</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-1" />
+                Logout
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogin}
+              disabled={isAuthenticating}
+            >
+              {isAuthenticating ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <LogIn className="w-4 h-4 mr-1" />
+              )}
+              Login
+            </Button>
+          )}
+          <div className="text-xs bg-gray-100 px-2 py-1 rounded">Demo: {demoState ? "ON" : "OFF"}</div>
+        </div>
       </div>
 
       {isInitialLoading ? (
@@ -513,6 +646,46 @@ export default function Component() {
                           (Optional) I can provide an even more tailored resume if you can have additional relevant
                           experiences and skills. Feel free to skip (all) questions if not relevant.&nbsp;
                         </p>
+
+                        {!isAuthenticated && (
+                          <div className="p-3 mb-3 bg-blue-50 border border-blue-200 rounded-md">
+                            <div className="flex items-start gap-2">
+                              <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-sm text-blue-800 font-medium">Authentication Required</p>
+                                <p className="text-xs text-blue-700 mt-1">
+                                  Please login with your Google account to submit answers to questions.
+                                </p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleLogin}
+                                  className="mt-2 bg-blue-100"
+                                  disabled={isAuthenticating}
+                                >
+                                  {isAuthenticating ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                      Logging in...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <LogIn className="w-4 h-4 mr-2" />
+                                      Login with Google
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {authError && (
+                          <div className="p-3 mb-3 bg-red-50 border border-red-200 rounded-md">
+                            <p className="text-sm text-red-600">{authError}</p>
+                          </div>
+                        )}
+
                         <div className="space-y-4">
                           {review.Questions && review.Questions.length > 0 ? (
                             review.Questions.map((question, index) => (
@@ -530,6 +703,7 @@ export default function Component() {
                                     }))
                                   }
                                   className="min-h-[60px] text-s"
+                                  disabled={!isAuthenticated}
                                 />
                               </div>
                             ))
@@ -540,25 +714,25 @@ export default function Component() {
                       </div>
 
                       <div className="mt-4 pt-4 border-t bg-background">
-                    <Button
-                      onClick={handleSubmitQuestions}
-                      disabled={isSubmittingQuestions}
-                      className="w-full"
-                      variant="secondary"
-                    >
-                      {isSubmittingQuestions ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4 mr-2" />
-                          Submit additional information
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                        <Button
+                          onClick={handleSubmitQuestions}
+                          disabled={isSubmittingQuestions || !isAuthenticated}
+                          className="w-full"
+                          variant="secondary"
+                        >
+                          {isSubmittingQuestions ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Submitting...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4 mr-2" />
+                              Submit additional information
+                            </>
+                          )}
+                        </Button>
+                      </div>
 
                     </div>
                   </ScrollArea>
