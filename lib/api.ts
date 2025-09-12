@@ -26,8 +26,9 @@ function isChromeExtension(): boolean {
 // }
 
 // Authentication configuration
+// Hard-code to pythonanywhere bounce URL
 const CHROME_EXTENSION_CLIENT_ID =
-  '547680597044-eefahq1bkcjj58b1shpa627q6ju0ssac.apps.googleusercontent.com';
+  '258289407737-mdh4gleu91oug8f5g8jqkt75f62te9kv.apps.googleusercontent.com';
 
 export const AUTH_CONFIG = {
   clientId: CHROME_EXTENSION_CLIENT_ID,              // <- explicit, no manifest dependency
