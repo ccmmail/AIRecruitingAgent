@@ -139,7 +139,8 @@ export async function clearAuthToken(): Promise<void> {
 function rand(n = 24): string {
   const arr = new Uint8Array(n);
   crypto.getRandomValues(arr);
-  return btoa(String.fromCharCode(...arr))
+  // Use Array.from to convert Uint8Array to number[] for String.fromCharCode
+  return btoa(String.fromCharCode(...Array.from(arr)))
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
@@ -234,7 +235,7 @@ export async function login(): Promise<AuthToken | null> {
   // Optional non-extension fallback (can be removed if unused)
   if (typeof window !== "undefined") {
     // This branch should rarely run in an extension context
-    const fallbackRedirect = AUTH_CONFIG.redirectUri ?? "/";
+    const fallbackRedirect = "/auth-callback.html";
     const params = new URLSearchParams({
       client_id: AUTH_CONFIG.clientId,
       redirect_uri: fallbackRedirect,
@@ -302,7 +303,8 @@ export async function postReview({
   const timeoutId = setTimeout(() => controller.abort(), 150000) // 150s timeout
 
   try {
-    const res = await fetch(`${base}/review`, {
+    // Add authorization header
+    const fetchOptions = await addAuthHeader({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -311,11 +313,18 @@ export async function postReview({
         demo: demo || false,
       }),
       signal: controller.signal,
-    })
+    });
+
+    const res = await fetch(`${base}/review`, fetchOptions)
 
     clearTimeout(timeoutId)
 
     if (!res.ok) {
+      // Handle 401/403 auth errors specially
+      if (res.status === 401 || res.status === 403) {
+        await clearAuthToken(); // Clear invalid token
+        throw new Error("Authentication required. Please login again.");
+      }
       throw new Error(`HTTP ${res.status}`)
     }
 
@@ -528,20 +537,28 @@ export async function manageResume({ action = "load" }: { action?: string } = {}
   const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
 
   try {
-    // Changed query parameter from 'action' to 'command' to match backend API
-    const res = await fetch(`${base}/resume?command=${action}`, {
+    // Add authorization header
+    const fetchOptions = await addAuthHeader({
       method: "GET",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
       signal: controller.signal,
-    })
+    });
+
+    // Changed query parameter from 'action' to 'command' to match backend API
+    const res = await fetch(`${base}/resume?command=${action}`, fetchOptions)
 
     clearTimeout(timeoutId)
     console.log("[v0] manageResume - Response status:", res.status)
 
     if (!res.ok) {
+      // Handle 401/403 auth errors specially
+      if (res.status === 401 || res.status === 403) {
+        await clearAuthToken(); // Clear invalid token
+        throw new Error("Authentication required. Please login again.");
+      }
       throw new Error(`HTTP ${res.status}`)
     }
 
