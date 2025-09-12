@@ -11,9 +11,7 @@ import os, shutil
 import json
 from dotenv import load_dotenv
 from .utils import redline_diff
-from .security import verify_token, require_user
-# get_current_user = verify_token  # alias for clarity and for unit tests override
-get_authorized_user = verify_token  # alias for clarity and for unit tests override
+from .security import check_authorized_user
 
 
 # Load environment variables from .env file
@@ -120,7 +118,8 @@ class Url(BaseModel):
 def get_job_description_from_url(url:Url):
     """Fetch job description from URL."""
     # TODO: Implement logic to fetch job description based on URL vs. canned response
-    job_description = JOB_DESCRIPTION_FILE.read_text()
+    if url.demo:
+        job_description = JOB_DESCRIPTION_FILE.read_text()
     return {"job_description": job_description}
 
 
@@ -155,7 +154,7 @@ class JobListing(BaseModel):
 
 @app.post("/review")
 @traceable(name="generate_review_endpoint")
-def generate_review(job_listing: JobListing):
+def generate_review(job_listing: JobListing, user=Depends(check_authorized_user)):
     """Generate a review and tailored resume based on the job description.
     Algo:
     1. If demo is true, return canned response
@@ -198,7 +197,7 @@ class QuestionAnswers(BaseModel):
 @app.post("/questions")
 @traceable(name="process_questions_and_answers_endpoint")
 def process_questions_and_answers(user_response: QuestionAnswers,
-                                  user=Depends(get_authorized_user)):
+                                  user=Depends(check_authorized_user)):
     """Generate an updated review and resume based on candidate's answers.
     Algo:
     1. If demo is true, return canned response
@@ -224,7 +223,7 @@ def process_questions_and_answers(user_response: QuestionAnswers,
 
 
 @app.get("/resume")
-def manage_resume(command:str):
+def manage_resume(command:str, user=Depends(check_authorized_user)):
     """Return the user's saved resume."""
     if command == "load":
         response = {"resume": RESUME_FILE.read_text()}
