@@ -47,6 +47,7 @@ os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
 langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
 
+
 # Start the FastAPI app by setting up temp dir & working files
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -68,7 +69,7 @@ async def lifespan(app: FastAPI):
         pass
     yield
     ## cleanup items here
-    ## none for now
+    # none for now
 
 
 app = FastAPI(debug=True, lifespan=lifespan)
@@ -82,12 +83,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["Authorization", "Content-Type"],
 )
-
-
-@app.get("/")
-def show_heartbeat():
-    """Return a message to show API is up."""
-    return {"message": "Hello World"}
 
 
 @traceable(name="prompt_LLM")
@@ -106,6 +101,12 @@ def prompt_llm(prompt: str) -> str:
 def create_resume_diff(baseline:str, revised:str) -> str:
     """Create a redlined diff between two resume versions."""
     return redline_diff(baseline, revised)
+
+
+@app.get("/")
+def show_heartbeat():
+    """Return a message to show API is up."""
+    return {"message": "Hello World"}
 
 
 class Url(BaseModel):
@@ -154,7 +155,8 @@ class JobListing(BaseModel):
 
 @app.post("/review")
 @traceable(name="generate_review_endpoint")
-def generate_review(job_listing: JobListing, user=Depends(check_authorized_user)):
+def generate_review(job_listing: JobListing,
+                    user=Depends(check_authorized_user)):
     """Generate a review and tailored resume based on the job description.
     Algo:
     1. If demo is true, return canned response
