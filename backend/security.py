@@ -36,7 +36,7 @@ def verify_token(creds: HTTPAuthorizationCredentials = Security(security)):
     if not creds or not creds.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No ID token provided is for authentication."
+            detail="Authentication required. No ID token provided."
         )
     token = creds.credentials
     try:
