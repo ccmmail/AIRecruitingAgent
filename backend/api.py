@@ -10,7 +10,7 @@ from pathlib import Path
 import os, shutil
 import json
 from dotenv import load_dotenv
-from .utils import redline_diff
+from .redline import redline_diff
 from .security import check_authorized_user, verify_token, security
 
 
@@ -118,9 +118,13 @@ class Url(BaseModel):
 @app.post("/jobdescription")
 def get_job_description_from_url(url:Url):
     """Fetch job description from URL."""
-    # TODO: Implement logic to fetch job description based on URL vs. canned response
+    # TODO: Implement logic to fetch job description based on URL vs. demo JD
     if url.demo:
         job_description = JOB_DESCRIPTION_FILE.read_text()
+        return {"job_description": job_description}
+
+    # For now, always return the demo JD when not implemented.
+    job_description = JOB_DESCRIPTION_FILE.read_text()
     return {"job_description": job_description}
 
 

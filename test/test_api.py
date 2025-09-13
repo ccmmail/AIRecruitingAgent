@@ -5,7 +5,6 @@ from backend import api
 from fastapi.testclient import TestClient
 from pathlib import Path
 from backend.security import verify_token
-get_authorized_user = verify_token  # alias for clarity
 
 
 # Working files for pytest unit tests
@@ -25,16 +24,18 @@ JOB_DESCRIPTION_FILE = TEMP_DIR / "job_description.txt"
 
 
 @pytest.fixture
-def test_client():
+def test_client(monkeypatch):
     """Create a test client for the FastAPI app."""
-    api.app.dependency_overrides[get_authorized_user] = lambda: {
+    # Patch the verify_token that api.py calls directly
+    monkeypatch.setattr(api, "verify_token", lambda creds=None: {
         "sub": "test-user-123",
         "email": "test@example.com",
+        "email_verified": True,
         "name": "Test User",
-    }
+    })
+
     with TestClient(api.app) as c:
         yield c
-    api.app.dependency_overrides.clear()
 
 
 def test_init_temp_folder_and_files(test_client):
