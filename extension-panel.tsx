@@ -82,6 +82,28 @@ export default function Component() {
   const [authError, setAuthError] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
 
+  // Reusable auth gate for API actions (keeps UX consistent)
+  const ensureAuthenticated = (opts?: { withLoading?: boolean }): boolean => {
+    if (!isAuthenticated) {
+      setError("Please login in first and try again.");
+      if (opts?.withLoading) {
+        setIsLoading(false);
+      }
+      return false;
+    }
+    return true;
+  };
+
+// Reusable auth error handler (returns true if handled)
+const handleAuthError = (err: any): boolean => {
+  if (err?.message?.includes("401")) {
+    setIsAuthenticated(false);
+    setError(err.message); // surface backend message verbatim
+    return true; // handled
+  }
+  return false; // not handled
+};
+
   // Safely check authentication only in client side
   useEffect(() => {
     // Skip authentication check during server-side rendering
@@ -148,9 +170,9 @@ export default function Component() {
     if (isAuthenticated) {
       setError((prevError) => {
         if (prevError && (
-          prevError.includes("Authentication required") ||
+          prevError.includes("authentication") ||
           prevError.includes("login") ||
-          prevError.includes("Authentication")
+          prevError.includes("authorized")
         )) {
           return null;
         }
@@ -241,19 +263,19 @@ export default function Component() {
       console.log("[v0] Response type:", typeof result)
       console.log("[v0] Response keys:", result ? Object.keys(result) : "null")
 
-      if (result) {
-        console.log("[v0] Fit object exists:", !!result.Fit)
-        console.log("[v0] Fit.score:", result.Fit?.score)
-        console.log("[v0] Fit.rationale length:", result.Fit?.rationale?.length)
-        console.log("[v0] Gap_Map exists:", !!result.Gap_Map)
-        console.log("[v0] Gap_Map is array:", Array.isArray(result.Gap_Map))
-        console.log("[v0] Gap_Map length:", result.Gap_Map?.length)
-        console.log("[v0] Questions exists:", !!result.Questions)
-        console.log("[v0] Questions is array:", Array.isArray(result.Questions))
-        console.log("[v0] Questions length:", result.Questions?.length)
-        console.log("[v0] Tailored_Resume exists:", !!result.Tailored_Resume)
-        console.log("[v0] Tailored_Resume length:", result.Tailored_Resume?.length)
-      }
+      // if (result) {
+      //   console.log("[v0] Fit object exists:", !!result.Fit)
+      //   console.log("[v0] Fit.score:", result.Fit?.score)
+      //   console.log("[v0] Fit.rationale length:", result.Fit?.rationale?.length)
+      //   console.log("[v0] Gap_Map exists:", !!result.Gap_Map)
+      //   console.log("[v0] Gap_Map is array:", Array.isArray(result.Gap_Map))
+      //   console.log("[v0] Gap_Map length:", result.Gap_Map?.length)
+      //   console.log("[v0] Questions exists:", !!result.Questions)
+      //   console.log("[v0] Questions is array:", Array.isArray(result.Questions))
+      //   console.log("[v0] Questions length:", result.Questions?.length)
+      //   console.log("[v0] Tailored_Resume exists:", !!result.Tailored_Resume)
+      //   console.log("[v0] Tailored_Resume length:", result.Tailored_Resume?.length)
+      // }
 
       if (result && typeof result === "object") {
         if (!result.Fit || typeof result.Fit.score !== "number") {
@@ -306,12 +328,7 @@ export default function Component() {
       console.log("[v0] Job description length:", jobDescription.trim().length)
       console.log("[v0] Active tab URL:", activeTabUrl)
 
-      // Check authentication first before making API call
-      if (!isAuthenticated) {
-        setError("Authentication required. Please login first.");
-        setIsLoading(false);
-        return;
-      }
+      if (!ensureAuthenticated({ withLoading: true })) return;
 
       try {
         const response = await postReviewWithRetry({
@@ -321,15 +338,11 @@ export default function Component() {
         });
 
         await handleApiResponse(Promise.resolve(response));
-      } catch (err: any) {
-        // Check for authentication errors but keep the original message
-        if (err?.message?.includes("401")) {
-          setIsAuthenticated(false);
-          setError(err.message); // Use the original detailed error message from the server
-        } else {
-          throw err; // Re-throw other errors to be caught by the outer catch
+        } catch (err: any) {
+          if (!handleAuthError(err)) {
+            throw err; // rethrow non-auth errors
+          }
         }
-      }
     } catch (err) {
       console.log("[v0] Review request failed:", err)
       setError(err instanceof Error ? err.message : "Failed to generate review")
@@ -342,11 +355,7 @@ export default function Component() {
   const handleSubmitQuestions = async () => {
     if (!review?.Questions) return;
 
-    // Check if authenticated before submitting questions
-    if (!isAuthenticated) {
-      setError("Authentication required. Please login first.");
-      return;
-    }
+    if (!ensureAuthenticated()) return;
 
     const qa_pairs = review.Questions.map((question, index) => ({
       question: question,
@@ -369,14 +378,9 @@ export default function Component() {
         setQuestionAnswers({});
       }
     } catch (err: any) {
-      console.log("[v0] Failed to submit questions:", err);
-
-      // Handle auth errors specially
-      if (err?.message?.includes("Authentication required")) {
-        setIsAuthenticated(false);
-        setError("Authentication expired. Please login again.");
+      if (!handleAuthError(err)) {
+        throw err; // rethrow non-auth errors
       }
-      // Other errors handled by handleApiResponse
     } finally {
       setIsSubmittingQuestions(false);
     }
@@ -514,8 +518,8 @@ export default function Component() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Authentication error message shown below tabs menu */}
-          {error && (error.includes("Authentication required") || error.includes("login")) && (
+          {/* All error message shown below tabs menu */}
+          {error && (
             <div className="p-3 mx-4 mt-4 bg-red-50 border border-red-200 rounded-md">
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
@@ -591,12 +595,6 @@ export default function Component() {
                 </Button>
               </div>
 
-              {/* Show non-authentication errors only */}
-              {error && !error.includes("Authentication required") && !error.includes("login") && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-600">{error}</p>
-                </div>
-              )}
             </div>
           </TabsContent>
 
