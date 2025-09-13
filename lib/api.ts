@@ -13,22 +13,9 @@ function isChromeExtension(): boolean {
   }
 }
 
-// // Get redirect URI safely
-// function getRedirectUri(): string {
-//   try {
-//     if (typeof window !== 'undefined' && (window as any).chrome?.identity) {
-//       return (window as any).chrome.identity.getRedirectURL('oauth2_cb');
-//     }
-//   } catch {
-//     // Ignore errors during build time
-//   }
-//   return `${typeof window !== 'undefined' ? window.location.origin : ''}/auth-callback.html`;
-// }
-
 // Authentication configuration
-// Hard-code to pythonanywhere bounce URL
 const CHROME_EXTENSION_CLIENT_ID =
-  '258289407737-mdh4gleu91oug8f5g8jqkt75f62te9kv.apps.googleusercontent.com';
+  '258289407737-mdh4gleu91oug8f5g8jqkt75f62te9kv.apps.googleusercontent.com'; // for airecruitingagent.pythonanywhere.com
 
 export const AUTH_CONFIG = {
   clientId: CHROME_EXTENSION_CLIENT_ID,              // <- explicit, no manifest dependency
@@ -150,15 +137,10 @@ function rand(n = 24): string {
 export async function login(): Promise<AuthToken | null> {
   try {
     if (isChromeExtension() && (window as any).chrome?.identity) {
-      // Choose ONE redirect URI (try B first; flip to A if Google still mismatches)
-      // const redirectUriA = (window as any).chrome.identity.getRedirectURL();            // https://<id>.chromiumapp.org/
-      // const redirectUriB = (window as any).chrome.identity.getRedirectURL("oauth2_cb"); // https://<id>.chromiumapp.org/oauth2_cb
-      // const useB = false; // set false to try the root URL
-      // const redirectUri = useB ? redirectUriB : redirectUriA;
         const redirectUri = "https://airecruitingagent.pythonanywhere.com/oauth2cb";
 
       // Hard-code client id to avoid manifest/env fallbacks during debug
-      const CLIENT_ID = "258289407737-mdh4gleu91oug8f5g8jqkt75f62te9kv.apps.googleusercontent.com"; // for airecruitingagent.pythonanywhere.com
+      const CLIENT_ID = CHROME_EXTENSION_CLIENT_ID;
       // Required when requesting id_token
       const state = rand();
       const nonce = rand();
@@ -266,22 +248,73 @@ export async function checkUserAuthentication(): Promise<boolean> {
 }
 
 // Keep the old function but clearly mark it as a function type
-export const isAuthenticated = async (): Promise<boolean> => {
+// export const isAuthenticated = async (): Promise<boolean> => {
+//     try {
+//         const token = await getAuthToken();
+//         return token !== null;
+//     } catch (error) {
+//         console.error("Authentication check failed:", error);
+//         return false;
+//     }
+// };
+
+// Unified error handler for fetch responses
+async function handleErrorResponse(res: Response): Promise<never> {
+  // Clear token only on 401 (auth problem), not on 403 (authorization)
+  if (res.status === 401) {
+    await clearAuthToken();
+  }
+
+  let message: string | undefined;
+
+  // Try JSON first — but don't throw inside this try/catch,
+  // because it would be caught below and we'd lose the message.
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
     try {
-        const token = await getAuthToken();
-        return token !== null;
-    } catch (error) {
-        console.error("Authentication check failed:", error);
-        return false;
+      const body = await res.json();
+      if (typeof body?.detail === "string") {
+        message = body.detail;
+      } else if (typeof body?.message === "string") {
+        message = body.message;
+      } else if (body != null) {
+        // last-resort: stringify the JSON object so we at least surface something useful
+        message = JSON.stringify(body);
+      }
+    } catch {
+      // fall through to text branch
     }
-};
+  }
+
+  // If we still don't have a message (non-JSON or JSON parse failed), try text
+  if (!message) {
+    try {
+      const text = await res.text();
+      if (text) {
+        message = text;
+      }
+    } catch {
+      // ignore; we'll fall back to status code
+    }
+  }
+
+  // Final fallback
+  if (!message) {
+    message = `HTTP ${res.status}`;
+  }
+
+  throw new Error(message);
+}
+
 // Helper to add auth token to fetch options
 async function addAuthHeader(options: RequestInit = {}): Promise<RequestInit> {
   const token = await getAuthToken();
+  // if (!token) {
+  //   throw new Error("Please log in to continue");
+  // }
   if (!token) {
-    throw new Error("Not authenticated");
+    return options;
   }
-
   return {
     ...options,
     headers: {
@@ -289,6 +322,37 @@ async function addAuthHeader(options: RequestInit = {}): Promise<RequestInit> {
       Authorization: `Bearer ${token.idToken}`,
     },
   };
+}
+
+export async function postReviewWithRetry({
+  jobDescription,
+  url,
+  demo,
+}: { jobDescription: string; url: string; demo?: boolean }) {
+  let lastError: Error
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const response = await postReview({ jobDescription, url, demo })
+      return response
+    } catch (error) {
+      lastError = error as Error
+
+      // Don't retry on authentication errors
+      if (error instanceof Error && (
+          error.message.includes("Authentication required") ||
+          error.message.includes("401") ||
+          error.message.includes("403"))) {
+        throw error
+      }
+
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 2000)) // 2s delay
+      }
+    }
+  }
+
+  throw lastError!
 }
 
 export async function postReview({
@@ -320,12 +384,7 @@ export async function postReview({
     clearTimeout(timeoutId)
 
     if (!res.ok) {
-      // Handle 401/403 auth errors specially
-      if (res.status === 401 || res.status === 403) {
-        await clearAuthToken(); // Clear invalid token
-        throw new Error("Authentication required. Please login again.");
-      }
-      throw new Error(`HTTP ${res.status}`)
+      await handleErrorResponse(res);
     }
 
     const textResponse = await res.text();
@@ -374,12 +433,7 @@ export async function postQuestions({
     clearTimeout(timeoutId)
 
     if (!res.ok) {
-      // Handle 401/403 auth errors specially
-      if (res.status === 401 || res.status === 403) {
-        await clearAuthToken(); // Clear invalid token
-        throw new Error("Authentication required. Please login again.");
-      }
-      throw new Error(`HTTP ${res.status}`)
+      await handleErrorResponse(res);
     }
 
     const textResponse = await res.text();
@@ -396,27 +450,6 @@ export async function postQuestions({
     console.error("API error:", error instanceof Error ? error.message : String(error))
     throw error
   }
-}
-
-export async function postReviewWithRetry({
-  jobDescription,
-  url,
-  demo,
-}: { jobDescription: string; url: string; demo?: boolean }) {
-  let lastError: Error
-
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      return await postReview({ jobDescription, url, demo })
-    } catch (error) {
-      lastError = error as Error
-      if (attempt < 2) {
-        await new Promise((resolve) => setTimeout(resolve, 2000)) // 2s delay
-      }
-    }
-  }
-
-  throw lastError!
 }
 
 export function cleanMarkdown(md: string): string {
@@ -554,12 +587,7 @@ export async function manageResume({ action = "load" }: { action?: string } = {}
     console.log("[v0] manageResume - Response status:", res.status)
 
     if (!res.ok) {
-      // Handle 401/403 auth errors specially
-      if (res.status === 401 || res.status === 403) {
-        await clearAuthToken(); // Clear invalid token
-        throw new Error("Authentication required. Please login again.");
-      }
-      throw new Error(`HTTP ${res.status}`)
+      await handleErrorResponse(res);
     }
 
     const data = await res.json()
