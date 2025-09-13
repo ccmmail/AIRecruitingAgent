@@ -20,7 +20,6 @@ import {
   manageResume,
   login,
   logout,
-  isAuthenticated,
   getAuthToken,
     checkUserAuthentication
 } from "@/lib/api"
@@ -143,6 +142,24 @@ export default function Component() {
     setUserEmail(null);
   };
 
+  // Clear authentication errors when authenticated state changes
+  useEffect(() => {
+    // If the user becomes authenticated, clear any auth-related errors
+    if (isAuthenticated) {
+      setError((prevError) => {
+        if (prevError && (
+          prevError.includes("Authentication required") ||
+          prevError.includes("login") ||
+          prevError.includes("Authentication")
+        )) {
+          return null;
+        }
+        return prevError;
+      });
+    }
+  }, [isAuthenticated]);
+
+  // Handle initialization
   useEffect(() => {
     // Skip initialization during server-side rendering
     if (typeof window === 'undefined') {
@@ -155,26 +172,26 @@ export default function Component() {
         const url = await getCurrentTabUrl()
         setActiveTabUrl(url)
 
-        // First, load the resume
-        setIsLoadingResume(true)
-        try {
-          const resumeResponse = await manageResume({ action: "load" })
-          console.log("[v0] Resume loaded successfully")
-          if (resumeResponse?.resume) {
-            setInitialResume(resumeResponse.resume)
-            setTailoredMarkdown(resumeResponse.resume) // Use initial resume as tailored markdown until we get a review
-            console.log("[v0] Resume content loaded, length:", resumeResponse.resume.length)
-          } else {
-            console.log("[v0] No resume content in response")
-          }
-        } catch (resumeError) {
-          console.log("[v0] Failed to load resume:", resumeError)
-        } finally {
-          setIsLoadingResume(false)
-          setIsInitialLoading(false) // End initial loading after resume is loaded
-        }
+        // // First, load the resume
+        // setIsLoadingResume(true)
+        // try {
+        //   const resumeResponse = await manageResume({ action: "load" })
+        //   console.log("[v0] Resume loaded successfully")
+        //   if (resumeResponse?.resume) {
+        //     setInitialResume(resumeResponse.resume)
+        //     setTailoredMarkdown(resumeResponse.resume) // Use initial resume as tailored markdown until we get a review
+        //     console.log("[v0] Resume content loaded, length:", resumeResponse.resume.length)
+        //   } else {
+        //     console.log("[v0] No resume content in response")
+        //   }
+        // } catch (resumeError) {
+        //   console.log("[v0] Failed to load resume:", resumeError)
+        // } finally {
+        //   setIsLoadingResume(false)
+        //   setIsInitialLoading(false) // End initial loading after resume is loaded
+        // }
 
-        // Then, proceed with the job description loading (existing behavior)
+        // Then, proceed with the job description loading
         if (demoState) {
           console.log("[v0] Demo_State is true, getting demo job description")
           const jdResponse = await getJobDescription({ url: url, demo: true })
@@ -289,13 +306,30 @@ export default function Component() {
       console.log("[v0] Job description length:", jobDescription.trim().length)
       console.log("[v0] Active tab URL:", activeTabUrl)
 
-      await handleApiResponse(
-        postReviewWithRetry({
+      // Check authentication first before making API call
+      if (!isAuthenticated) {
+        setError("Authentication required. Please login first.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await postReviewWithRetry({
           jobDescription: jobDescription.trim(),
           url: activeTabUrl,
           demo: demoState,
-        })
-      )
+        });
+
+        await handleApiResponse(Promise.resolve(response));
+      } catch (err: any) {
+        // Check for authentication errors but keep the original message
+        if (err?.message?.includes("401")) {
+          setIsAuthenticated(false);
+          setError(err.message); // Use the original detailed error message from the server
+        } else {
+          throw err; // Re-throw other errors to be caught by the outer catch
+        }
+      }
     } catch (err) {
       console.log("[v0] Review request failed:", err)
       setError(err instanceof Error ? err.message : "Failed to generate review")
@@ -310,7 +344,7 @@ export default function Component() {
 
     // Check if authenticated before submitting questions
     if (!isAuthenticated) {
-      setError("Please login first to submit questions");
+      setError("Authentication required. Please login first.");
       return;
     }
 
@@ -426,34 +460,30 @@ export default function Component() {
             <p className="text-xs text-muted-foreground">AI-Powered Job Application Helper</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-end">
+          <div className="text-xs bg-gray-100 px-2 py-1 rounded">Demo: {demoState ? "ON" : "OFF"}</div>
           {isAuthenticated ? (
-            <div className="flex items-center gap-2">
-              <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
+            <div className="flex items-center gap-1 mt-1 text-xs">
+              <span className="text-green-800 flex items-center gap-1">
                 <User className="w-3 h-3" />
                 <span className="max-w-[100px] truncate">{userEmail}</span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-1" />
-                Logout
-              </Button>
+              </span>
+              <button
+                onClick={handleLogout}
+                className="text-blue-600 hover:text-blue-800 underline ml-1"
+              >
+                (logout)
+              </button>
             </div>
           ) : (
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={handleLogin}
+              className="text-xs text-blue-600 hover:text-blue-800 underline mt-1"
               disabled={isAuthenticating}
             >
-              {isAuthenticating ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-              ) : (
-                <LogIn className="w-4 h-4 mr-1" />
-              )}
-              Login
-            </Button>
+              {isAuthenticating ? "Logging in..." : "Login"}
+            </button>
           )}
-          <div className="text-xs bg-gray-100 px-2 py-1 rounded">Demo: {demoState ? "ON" : "OFF"}</div>
         </div>
       </div>
 
@@ -483,6 +513,16 @@ export default function Component() {
               Contacts
             </TabsTrigger>
           </TabsList>
+
+          {/* Authentication error message shown below tabs menu */}
+          {error && (error.includes("Authentication required") || error.includes("login")) && (
+            <div className="p-3 mx-4 mt-4 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            </div>
+          )}
 
           <TabsContent value="job-description" className="flex-1 m-0">
             <div className="p-4 space-y-4">
@@ -551,18 +591,10 @@ export default function Component() {
                 </Button>
               </div>
 
-              {error && (
+              {/* Show non-authentication errors only */}
+              {error && !error.includes("Authentication required") && !error.includes("login") && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                   <p className="text-sm text-red-600">{error}</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSendToReview}
-                    className="mt-2 bg-transparent"
-                    disabled={isLoading}
-                  >
-                    Try Again
-                  </Button>
                 </div>
               )}
             </div>
@@ -647,39 +679,6 @@ export default function Component() {
                           experiences and skills. Feel free to skip (all) questions if not relevant.&nbsp;
                         </p>
 
-                        {!isAuthenticated && (
-                          <div className="p-3 mb-3 bg-blue-50 border border-blue-200 rounded-md">
-                            <div className="flex items-start gap-2">
-                              <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                              <div>
-                                <p className="text-sm text-blue-800 font-medium">Authentication Required</p>
-                                <p className="text-xs text-blue-700 mt-1">
-                                  Please login with your Google account to submit answers to questions.
-                                </p>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={handleLogin}
-                                  className="mt-2 bg-blue-100"
-                                  disabled={isAuthenticating}
-                                >
-                                  {isAuthenticating ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                      Logging in...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <LogIn className="w-4 h-4 mr-2" />
-                                      Login with Google
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
                         {authError && (
                           <div className="p-3 mb-3 bg-red-50 border border-red-200 rounded-md">
                             <p className="text-sm text-red-600">{authError}</p>
@@ -703,7 +702,6 @@ export default function Component() {
                                     }))
                                   }
                                   className="min-h-[60px] text-s"
-                                  disabled={!isAuthenticated}
                                 />
                               </div>
                             ))
@@ -716,7 +714,7 @@ export default function Component() {
                       <div className="mt-4 pt-4 border-t bg-background">
                         <Button
                           onClick={handleSubmitQuestions}
-                          disabled={isSubmittingQuestions || !isAuthenticated}
+                          disabled={isSubmittingQuestions}
                           className="w-full"
                           variant="secondary"
                         >
