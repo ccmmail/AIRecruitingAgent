@@ -32,7 +32,7 @@ ALLOWED_DOMAINS = _parse_list("ALLOWED_DOMAINS")  # optional e.g., "udemy.com"
 
 
 def verify_token(creds: HTTPAuthorizationCredentials = Security(security)):
-    """Authenticated user by verifying the Google ID token."""
+    """Authenticate user by verifying the Google ID token."""
     if not creds or not creds.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
