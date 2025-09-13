@@ -46,11 +46,15 @@ def verify_token(creds: HTTPAuthorizationCredentials = Security(security)):
             GOOGLE_WEB_CLIENT_ID,  # aud must equal your WEB client_id
         )
         if claims["iss"] not in {"accounts.google.com", "https://accounts.google.com"}:
-            raise ValueError("Wrong issuer")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Wrong issuer"
+            )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid ID token for authentication: {e}")
+            detail=f"Invalid ID token for authentication: {e}"
+        )
     return claims
 
 
@@ -73,5 +77,5 @@ def check_authorized_user(claims: dict = Depends(verify_token)) -> dict:
     # email not authorized
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail=f"{email} is not an authorized user."
+        detail=f"{email} is not an authorized user. Please contact ccmmmail@gmail.com for access."
     )

@@ -1,6 +1,6 @@
 """APIs for generating a resume review and changes tailored to a given job description."""
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Security
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
@@ -11,7 +11,7 @@ import os, shutil
 import json
 from dotenv import load_dotenv
 from .utils import redline_diff
-from .security import check_authorized_user
+from .security import check_authorized_user, verify_token, security
 
 
 # Load environment variables from .env file
@@ -156,7 +156,8 @@ class JobListing(BaseModel):
 @app.post("/review")
 @traceable(name="generate_review_endpoint")
 def generate_review(job_listing: JobListing,
-                    user=Depends(check_authorized_user)):
+                    creds=Security(security)
+                    ):
     """Generate a review and tailored resume based on the job description.
     Algo:
     1. If demo is true, return canned response
@@ -167,6 +168,11 @@ def generate_review(job_listing: JobListing,
     6. Save the diff of baseline and revised resumes in the API response
     7. Return the response
     """
+    # Only perform authentication/authorization for non-demo calls
+    if not job_listing.demo:
+        claims = verify_token(creds)
+        check_authorized_user(claims)
+
     if job_listing.demo:  # returned stubbed API response
         response = json.loads(RESPONSE_REVIEW_DEMO_FILE.read_text())
         return response
@@ -199,13 +205,19 @@ class QuestionAnswers(BaseModel):
 @app.post("/questions")
 @traceable(name="process_questions_and_answers_endpoint")
 def process_questions_and_answers(user_response: QuestionAnswers,
-                                  user=Depends(check_authorized_user)):
+                                  creds=Security(security)
+                                  ):
     """Generate an updated review and resume based on candidate's answers.
     Algo:
     1. If demo is true, return canned response
     2. Save user response to USER_RESPONSE_FILE
     4. Call generate_review() to get the updated review and resume
     """
+    # Only perform authentication/authorization for non-demo calls
+    if not user_response.demo:
+        claims = verify_token(creds)
+        check_authorized_user(claims)
+
     if user_response.demo:  # returned stubbed API response
         response = json.loads(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE.read_text())
         return response
@@ -225,8 +237,15 @@ def process_questions_and_answers(user_response: QuestionAnswers,
 
 
 @app.get("/resume")
-def manage_resume(command:str, user=Depends(check_authorized_user)):
+def manage_resume(command:str, demo: bool = False,
+                  creds=Security(security),
+                  ):
     """Return the user's saved resume."""
+    # Only perform authentication/authorization for non-demo calls
+    if not demo:
+        claims = verify_token(creds)
+        check_authorized_user(claims)
+
     if command == "load":
         response = {"resume": RESUME_FILE.read_text()}
     else:

@@ -508,9 +508,12 @@ export function getJobDescription({ url, demo }: { url: string; demo?: boolean }
   );
 }
 
-export function manageResume({ action = "load" }: { action?: string } = {}): Promise<ResumeResponse> {
+export function manageResume(
+  { action = "load", demo = false }: { action?: string; demo?: boolean } = {}
+): Promise<ResumeResponse> {
+  const qs = new URLSearchParams({ command: action, demo: String(!!demo) });
   return withRetry(
-    () => apiFetch<ResumeResponse>(`/resume?command=${action}`, {
+    () => apiFetch<ResumeResponse>(`/resume?${qs.toString()}`, {
       method: "GET",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
     }, { auth: true, timeoutMs: 30000, parse: "json" }),
