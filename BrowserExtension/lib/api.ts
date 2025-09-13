@@ -14,7 +14,7 @@ function isChromeExtension(): boolean {
 }
 
 // bounce needed since chrome extension wasn't binding properly in Google Cloud Console
-const AUTH_REDIRECT_URI = 'https://airecruitingagent.pythonanywhere.com/oauth2cb'
+const AUTH_REDIRECT_URI = 'https://airecruitingagent.pythonanywhere.com/oauth2cb';
 // Authentication configuration
 const CHROME_EXTENSION_CLIENT_ID =
   '258289407737-mdh4gleu91oug8f5g8jqkt75f62te9kv.apps.googleusercontent.com'; // for airecruitingagent.pythonanywhere.com
@@ -464,13 +464,28 @@ export function cleanMarkdown(md: string): string {
 export async function getCurrentTabUrl(): Promise<string> {
   try {
     if (isChromeExtension() && (window as any).chrome?.tabs) {
-      const [tab] = await (window as any).chrome.tabs.query({ active: true, currentWindow: true });
-      return tab?.url || (typeof window !== "undefined" ? window.location.href : "");
+      return await new Promise<string>((resolve) => {
+        try {
+          (window as any).chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
+            const lastErr = (window as any).chrome?.runtime?.lastError;
+            if (lastErr) {
+              console.warn("[tabs.query] lastError:", lastErr.message || lastErr);
+              // Fall back to the panel's own URL so we never reject on load
+              resolve(typeof window !== "undefined" ? window.location.href : "");
+              return;
+            }
+            resolve(tabs?.[0]?.url || (typeof window !== "undefined" ? window.location.href : ""));
+          });
+        } catch (inner) {
+          console.warn("[tabs.query] threw synchronously:", inner);
+          resolve(typeof window !== "undefined" ? window.location.href : "");
+        }
+      });
     }
-  } catch {
+  } catch (e) {
     // Fallback for non-extension environment or during build
+    console.warn("[getCurrentTabUrl] outer try/catch:", e);
   }
-
   return typeof window !== "undefined" ? window.location.href : "";
 }
 
