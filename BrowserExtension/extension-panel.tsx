@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { FileText, CheckCircle, AlertCircle, Linkedin, Loader2, Copy, Send, LogIn, LogOut, User } from "lucide-react"
 import {
-  postReviewWithRetry,
+  postReview,
   postQuestions,
   cleanMarkdown,
   getCurrentTabUrl,
@@ -21,7 +21,7 @@ import {
   login,
   logout,
   getAuthToken,
-    checkUserAuthentication
+  checkUserAuthentication
 } from "@/lib/api"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { Tooltip } from "@/components/tooltip"
@@ -75,7 +75,7 @@ export default function Component() {
   const [showEditingTooltip, setShowEditingTooltip] = useState(true)
   const [demoState, setDemoState] = useState(true)
   const [initialResume, setInitialResume] = useState("")
-  const [isLoadingResume, setIsLoadingResume] = useState(true)
+  const [isLoadingResume, setIsLoadingResume] = useState(false)
   // Authentication states
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
@@ -232,15 +232,22 @@ const handleAuthError = (err: any): boolean => {
     // Only special-case the Resume tab
     if (val !== "resume") return;
 
+    // Entering the resume tab: default to not loading; we'll flip to true only if we fetch
+    setIsLoadingResume(false);
+
     // 1) If not logged in, show an error and stop
     if (!isAuthenticated) {
-      setError("Please login first to view your resume.");
+      setError("Please login to view your resume.");
+      setIsLoadingResume(false);
       return;
     }
 
     // 2) If a resume is already loaded in state, do nothing
     const hasResume = Boolean(tailoredMarkdown || initialResume);
-    if (hasResume) return;
+    if (hasResume) {
+      setIsLoadingResume(false);
+      return;
+    }
 
     // 3) Otherwise, load resume from backend
     setIsLoadingResume(true);
@@ -283,20 +290,6 @@ const handleAuthError = (err: any): boolean => {
       console.log("[v0] API response received:", result)
       console.log("[v0] Response type:", typeof result)
       console.log("[v0] Response keys:", result ? Object.keys(result) : "null")
-
-      // if (result) {
-      //   console.log("[v0] Fit object exists:", !!result.Fit)
-      //   console.log("[v0] Fit.score:", result.Fit?.score)
-      //   console.log("[v0] Fit.rationale length:", result.Fit?.rationale?.length)
-      //   console.log("[v0] Gap_Map exists:", !!result.Gap_Map)
-      //   console.log("[v0] Gap_Map is array:", Array.isArray(result.Gap_Map))
-      //   console.log("[v0] Gap_Map length:", result.Gap_Map?.length)
-      //   console.log("[v0] Questions exists:", !!result.Questions)
-      //   console.log("[v0] Questions is array:", Array.isArray(result.Questions))
-      //   console.log("[v0] Questions length:", result.Questions?.length)
-      //   console.log("[v0] Tailored_Resume exists:", !!result.Tailored_Resume)
-      //   console.log("[v0] Tailored_Resume length:", result.Tailored_Resume?.length)
-      // }
 
       if (result && typeof result === "object") {
         if (!result.Fit || typeof result.Fit.score !== "number") {
@@ -352,18 +345,17 @@ const handleAuthError = (err: any): boolean => {
       if (!ensureAuthenticated({ withLoading: true })) return;
 
       try {
-        const response = await postReviewWithRetry({
+        const response = await postReview({
           jobDescription: jobDescription.trim(),
           url: activeTabUrl,
           demo: demoState,
         });
-
         await handleApiResponse(Promise.resolve(response));
-        } catch (err: any) {
-          if (!handleAuthError(err)) {
-            throw err; // rethrow non-auth errors
-          }
+      } catch (err: any) {
+        if (!handleAuthError(err)) {
+          throw err; // rethrow non-auth errors
         }
+      }
     } catch (err) {
       console.log("[v0] Review request failed:", err)
       setError(err instanceof Error ? err.message : "Failed to generate review")

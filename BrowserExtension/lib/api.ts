@@ -13,6 +13,8 @@ function isChromeExtension(): boolean {
   }
 }
 
+// bounce needed since chrome extension wasn't binding properly in Google Cloud Console
+const AUTH_REDIRECT_URI = 'https://airecruitingagent.pythonanywhere.com/oauth2cb'
 // Authentication configuration
 const CHROME_EXTENSION_CLIENT_ID =
   '258289407737-mdh4gleu91oug8f5g8jqkt75f62te9kv.apps.googleusercontent.com'; // for airecruitingagent.pythonanywhere.com
@@ -121,6 +123,13 @@ export async function clearAuthToken(): Promise<void> {
   }
 }
 
+// Token store utility (DRY wrapper around get/save/clear)
+export const tokenStore = {
+  get: async () => getAuthToken(),
+  set: async (token: AuthToken) => saveAuthToken(token),
+  clear: async () => clearAuthToken(),
+};
+
 // Initiate Google OAuth login
 
 function rand(n = 24): string {
@@ -137,7 +146,7 @@ function rand(n = 24): string {
 export async function login(): Promise<AuthToken | null> {
   try {
     if (isChromeExtension() && (window as any).chrome?.identity) {
-        const redirectUri = "https://airecruitingagent.pythonanywhere.com/oauth2cb";
+        const redirectUri = AUTH_REDIRECT_URI;
 
       // Hard-code client id to avoid manifest/env fallbacks during debug
       const CLIENT_ID = CHROME_EXTENSION_CLIENT_ID;
@@ -207,7 +216,7 @@ export async function login(): Promise<AuthToken | null> {
 
       const expiresAt = Date.now() + parseInt(expiresIn, 10) * 1000;
       const token = { accessToken, idToken, expiresAt };
-      await saveAuthToken(token);
+      await tokenStore.set(token);
       return token;
     }
   } catch (e) {
@@ -232,10 +241,9 @@ export async function login(): Promise<AuthToken | null> {
 
 // Logout
 export async function logout(): Promise<void> {
-  await clearAuthToken();
+  await tokenStore.clear();
 }
 
-// Create a completely new function with a different name
 export async function checkUserAuthentication(): Promise<boolean> {
   try {
     const token = await getAuthToken();
@@ -247,22 +255,11 @@ export async function checkUserAuthentication(): Promise<boolean> {
   }
 }
 
-// Keep the old function but clearly mark it as a function type
-// export const isAuthenticated = async (): Promise<boolean> => {
-//     try {
-//         const token = await getAuthToken();
-//         return token !== null;
-//     } catch (error) {
-//         console.error("Authentication check failed:", error);
-//         return false;
-//     }
-// };
-
 // Unified error handler for fetch responses
 async function handleErrorResponse(res: Response): Promise<never> {
   // Clear token only on 401 (auth problem), not on 403 (authorization)
   if (res.status === 401) {
-    await clearAuthToken();
+    await tokenStore.clear();
   }
 
   let message: string | undefined;
@@ -306,53 +303,57 @@ async function handleErrorResponse(res: Response): Promise<never> {
   throw new Error(message);
 }
 
-// Helper to add auth token to fetch options
-async function addAuthHeader(options: RequestInit = {}): Promise<RequestInit> {
-  const token = await getAuthToken();
-  // if (!token) {
-  //   throw new Error("Please log in to continue");
-  // }
-  if (!token) {
-    return options;
-  }
-  return {
-    ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${token.idToken}`,
-    },
-  };
+// Helper to add auth token to fetch options (uses tokenStore)
+async function addAuthHeader(init: RequestInit = {}): Promise<RequestInit> {
+  const token = await tokenStore.get();
+  if (!token) return init;
+  const headers = new Headers(init.headers || {});
+  headers.set("Authorization", `Bearer ${token.idToken}`);
+  return { ...init, headers };
 }
 
-export async function postReviewWithRetry({
-  jobDescription,
-  url,
-  demo,
-}: { jobDescription: string; url: string; demo?: boolean }) {
-  let lastError: Error
+// --- Unified fetch & retry helpers ---
+type ParseMode = "json" | "text" | "raw";
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
+async function apiFetch<T = unknown>(
+  path: string,
+  init: RequestInit = {},
+  opts: { auth?: boolean; timeoutMs?: number; parse?: ParseMode } = {},
+): Promise<T extends void ? never : T> {
+  const { auth = true, timeoutMs = 30000, parse = "json" } = opts;
+
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const base = getBackendUrl();
+    const withAuth = auth ? await addAuthHeader(init) : init;
+    const res = await fetch(`${base}${path}`, { ...withAuth, signal: controller.signal });
+    if (!res.ok) {
+      await handleErrorResponse(res); // throws
+    }
+    if (parse === "raw") return res as any;
+    if (parse === "text") return (await res.text()) as any;
+    return (await res.json()) as any;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+type RetryOpts = { retries?: number; delayMs?: number; shouldRetry?: (e: unknown) => boolean };
+
+async function withRetry<T>(fn: () => Promise<T>, opts: RetryOpts = {}) {
+  const { retries = 0, delayMs = 2000, shouldRetry = () => true } = opts;
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const response = await postReview({ jobDescription, url, demo })
-      return response
-    } catch (error) {
-      lastError = error as Error
-
-      // Don't retry on authentication errors
-      if (error instanceof Error && (
-          error.message.includes("Authentication required") ||
-          error.message.includes("401") ||
-          error.message.includes("403"))) {
-        throw error
-      }
-
-      if (attempt < 2) {
-        await new Promise((resolve) => setTimeout(resolve, 2000)) // 2s delay
-      }
+      return await fn();
+    } catch (e) {
+      lastError = e;
+      if (attempt === retries || !shouldRetry(e)) break;
+      await new Promise(r => setTimeout(r, delayMs));
     }
   }
-
-  throw lastError!
+  throw lastError;
 }
 
 export async function postReview({
@@ -360,47 +361,25 @@ export async function postReview({
   url,
   demo,
 }: { jobDescription: string; url: string; demo?: boolean }) {
-  const base = getBackendUrl()
-  console.log("[v0] postReview - Using backend URL:", base)
-
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 150000) // 150s timeout
-
-  try {
-    // Add authorization header
-    const fetchOptions = await addAuthHeader({
+  return withRetry(
+    () => apiFetch("/review", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         job_description: jobDescription,
-        url: url,
-        demo: demo || false,
+        url,
+        demo: !!demo,
       }),
-      signal: controller.signal,
-    });
-
-    const res = await fetch(`${base}/review`, fetchOptions)
-
-    clearTimeout(timeoutId)
-
-    if (!res.ok) {
-      await handleErrorResponse(res);
+    }, { auth: true, timeoutMs: 150000, parse: "json" }),
+    {
+      retries: 1,
+      delayMs: 2000,
+      shouldRetry: (e) => {
+        const msg = String((e as Error)?.message || "");
+        return !(msg.includes("401") || msg.includes("403") || msg.toLowerCase().includes("authentication"));
+      }
     }
-
-    const textResponse = await res.text();
-
-    try {
-      // Parse the response text as JSON
-      return JSON.parse(textResponse);
-    } catch (parseError) {
-      console.error("Failed to parse response as JSON:", parseError);
-      throw new Error("Invalid response format from server");
-    }
-  } catch (error: unknown) {
-    clearTimeout(timeoutId)
-    console.error("API error:", error instanceof Error ? error.message : String(error))
-    throw error
-  }
+  );
 }
 
 export async function postQuestions({
@@ -410,46 +389,21 @@ export async function postQuestions({
   qa_pairs: Array<{ question: string; answer: string }>;
   demo?: boolean;
 }) {
-  const base = getBackendUrl()
-  console.log("[v0] postQuestions - Using backend URL:", base)
-
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 150000) // 150s timeout
-
-  try {
-    // Add authorization header
-    const fetchOptions = await addAuthHeader({
+  return withRetry(
+    () => apiFetch("/questions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        qa_pairs: qa_pairs,
-        demo: demo || false
-      }),
-      signal: controller.signal,
-    });
-
-    const res = await fetch(`${base}/questions`, fetchOptions);
-
-    clearTimeout(timeoutId)
-
-    if (!res.ok) {
-      await handleErrorResponse(res);
+      body: JSON.stringify({ qa_pairs, demo: !!demo }),
+    }, { auth: true, timeoutMs: 150000, parse: "json" }),
+    {
+      retries: 1,
+      delayMs: 2000,
+      shouldRetry: (e) => {
+        const msg = String((e as Error)?.message || "");
+        return !(msg.includes("401") || msg.includes("403") || msg.toLowerCase().includes("authentication"));
+      }
     }
-
-    const textResponse = await res.text();
-
-    try {
-      // Parse the response text as JSON
-      return JSON.parse(textResponse);
-    } catch (parseError) {
-      console.error("Failed to parse response as JSON:", parseError);
-      throw new Error("Invalid response format from server");
-    }
-  } catch (error: unknown) {
-    clearTimeout(timeoutId)
-    console.error("API error:", error instanceof Error ? error.message : String(error))
-    throw error
-  }
+  );
 }
 
 export function cleanMarkdown(md: string): string {
@@ -496,113 +450,38 @@ export async function getCurrentTabUrl(): Promise<string> {
   return typeof window !== "undefined" ? window.location.href : "";
 }
 
-export async function getJobDescription({ url, demo }: { url: string; demo?: boolean }) {
-  const base = getBackendUrl()
-  console.log("[v0] getJobDescription - Using backend URL:", base)
-  console.log("[v0] getJobDescription - Request payload:", { url, demo })
-
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
-
-  try {
-    const fullUrl = `${base}/jobdescription`
-    console.log("[v0] getJobDescription - Full URL:", fullUrl)
-
-    const fetchOptions = {
+export function getJobDescription({ url, demo }: { url: string; demo?: boolean }) {
+  return withRetry(
+    () => apiFetch("/jobdescription", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        url: url,
-        demo: demo || false,
-      }),
-      signal: controller.signal,
-      mode: "cors" as RequestMode,
-      credentials: "omit" as RequestCredentials,
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ url, demo: !!demo }),
+    }, { auth: false, timeoutMs: 30000, parse: "json" }),
+    {
+      retries: 1,
+      delayMs: 2000,
+      shouldRetry: (e) => {
+        const msg = String((e as Error)?.message || "");
+        // Retry most network-ish failures; job description is public/unauth
+        return !(msg.includes("401") || msg.includes("403"));
+      }
     }
-
-    console.log("[v0] getJobDescription - Fetch options:", fetchOptions)
-    console.log("[v0] getJobDescription - Extension context check:", {
-      isExtension: typeof chrome !== "undefined",
-      hasPermissions: typeof chrome !== "undefined" && typeof (chrome as any).permissions !== "undefined",
-      userAgent: navigator.userAgent,
-    })
-
-    const res = await fetch(fullUrl, fetchOptions)
-
-    clearTimeout(timeoutId)
-    console.log("[v0] getJobDescription - Response status:", res.status)
-    console.log("[v0] getJobDescription - Response headers:", Object.fromEntries(res.headers.entries()))
-
-    if (!res.ok) {
-      const errorText = await res.text()
-      console.log("[v0] getJobDescription - Error response:", errorText)
-      throw new Error(`HTTP ${res.status}: ${errorText}`)
-    }
-
-    const data = await res.json()
-    console.log("[v0] getJobDescription - Success response:", data)
-    return data
-  } catch (error: unknown) {
-    clearTimeout(timeoutId)
-    console.log("[v0] getJobDescription - Fetch error details:", {
-      name: error instanceof Error ? error.name : "Unknown error",
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    })
-
-    if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
-      console.log("[v0] getJobDescription - Likely CORS or network connectivity issue")
-      console.log("[v0] getJobDescription - Check if backend server is running and CORS is configured")
-    }
-
-    throw error
-  }
+  );
 }
 
-export async function manageResume({ action = "load" }: { action?: string } = {}) {
-  const base = getBackendUrl()
-  console.log("[v0] manageResume - Using backend URL:", base)
-
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
-
-  try {
-    // Add authorization header
-    const fetchOptions = await addAuthHeader({
+export function manageResume({ action = "load" }: { action?: string } = {}) {
+  return withRetry(
+    () => apiFetch(`/resume?command=${action}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      signal: controller.signal,
-    });
-
-    // Changed query parameter from 'action' to 'command' to match backend API
-    const res = await fetch(`${base}/resume?command=${action}`, fetchOptions)
-
-    clearTimeout(timeoutId)
-    console.log("[v0] manageResume - Response status:", res.status)
-
-    if (!res.ok) {
-      await handleErrorResponse(res);
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+    }, { auth: true, timeoutMs: 30000, parse: "json" }),
+    {
+      retries: 1,
+      delayMs: 2000,
+      shouldRetry: (e) => {
+        const msg = String((e as Error)?.message || "");
+        return !(msg.includes("401") || msg.includes("403") || msg.toLowerCase().includes("authentication"));
+      }
     }
-
-    const data = await res.json()
-    console.log("[v0] manageResume - Success response received")
-
-    // Check if response contains the expected 'resume' property
-    if (!data.resume && !data.error) {
-      console.error("[v0] manageResume - Unexpected response format:", data)
-      throw new Error("Unexpected response format from server")
-    }
-
-    return data
-  } catch (error: unknown) {
-    clearTimeout(timeoutId)
-    console.error("API error:", error instanceof Error ? error.message : String(error))
-    throw error
-  }
+  );
 }
