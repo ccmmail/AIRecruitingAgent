@@ -37,6 +37,30 @@ interface AuthToken {
   expiresAt: number;
 }
 
+// ---- Lightweight API response types ----
+export interface ReviewResponse {
+  Tailored_Resume?: string;
+  Fit?: { score?: number; rationale?: string };
+  Gap_Map?: Array<{
+    "JD Requirement/Keyword": string;
+    "Present in Resume?": "Y" | "N";
+    "Where/Evidence": string;
+    "Gap handling": string;
+  }>;
+  Questions?: string[];
+  error?: string;
+}
+
+export interface ResumeResponse {
+  resume?: string;
+  error?: string;
+}
+
+export interface JobDescriptionResponse {
+  job_description?: string;
+  error?: string;
+}
+
 function getBackendUrl(): string {
   // Try to get from window (injected during build)
   if (typeof window !== "undefined" && (window as any).__BACKEND_URL__) {
@@ -360,9 +384,9 @@ export async function postReview({
   jobDescription,
   url,
   demo,
-}: { jobDescription: string; url: string; demo?: boolean }) {
+}: { jobDescription: string; url: string; demo?: boolean }): Promise<ReviewResponse> {
   return withRetry(
-    () => apiFetch("/review", {
+    () => apiFetch<ReviewResponse>("/review", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -388,9 +412,9 @@ export async function postQuestions({
 }: {
   qa_pairs: Array<{ question: string; answer: string }>;
   demo?: boolean;
-}) {
+}): Promise<ReviewResponse> {
   return withRetry(
-    () => apiFetch("/questions", {
+    () => apiFetch<ReviewResponse>("/questions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ qa_pairs, demo: !!demo }),
@@ -450,9 +474,9 @@ export async function getCurrentTabUrl(): Promise<string> {
   return typeof window !== "undefined" ? window.location.href : "";
 }
 
-export function getJobDescription({ url, demo }: { url: string; demo?: boolean }) {
+export function getJobDescription({ url, demo }: { url: string; demo?: boolean }): Promise<JobDescriptionResponse> {
   return withRetry(
-    () => apiFetch("/jobdescription", {
+    () => apiFetch<JobDescriptionResponse>("/jobdescription", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ url, demo: !!demo }),
@@ -469,9 +493,9 @@ export function getJobDescription({ url, demo }: { url: string; demo?: boolean }
   );
 }
 
-export function manageResume({ action = "load" }: { action?: string } = {}) {
+export function manageResume({ action = "load" }: { action?: string } = {}): Promise<ResumeResponse> {
   return withRetry(
-    () => apiFetch(`/resume?command=${action}`, {
+    () => apiFetch<ResumeResponse>(`/resume?command=${action}`, {
       method: "GET",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
     }, { auth: true, timeoutMs: 30000, parse: "json" }),
