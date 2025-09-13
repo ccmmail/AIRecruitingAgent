@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -79,8 +79,12 @@ export default function Component() {
   // Authentication states
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
+  const [isAuthorized, setIsAuthorized] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+
+  // Track if a resume has been loaded during this session
+  const resumeLoadedRef = useRef(false)
 
   // Reusable auth gate for API actions (keeps UX consistent)
   const ensureAuthenticated = (opts?: { withLoading?: boolean }): boolean => {
@@ -94,15 +98,35 @@ export default function Component() {
     return true;
   };
 
-// Reusable auth error handler (returns true if handled)
-const handleAuthError = (err: any): boolean => {
-  if (err?.message?.includes("401")) {
-    setIsAuthenticated(false);
-    setError(err.message); // surface backend message verbatim
-    return true; // handled
-  }
-  return false; // not handled
-};
+  // Helper to check if any resume content is loaded in memory
+  const hasAnyResume = () =>
+    Boolean((tailoredMarkdown && tailoredMarkdown.trim().length > 0) ||
+            (initialResume && initialResume.trim().length > 0));
+
+  // Reusable auth error handler (returns true if handled)
+  const handleAuthError = (err: any): boolean => {
+    const msg = String(err?.message || "");
+    if (msg.includes("401")) {
+      // Authentication problem: mark logged out, revoke authorization, clear sensitive content
+      setIsAuthenticated(false);
+      setIsAuthorized(false);
+      setTailoredMarkdown("");
+      setInitialResume("");
+      resumeLoadedRef.current = false;
+      setError(msg);
+      return true;
+    }
+    // Authorization problem: keep session but forbid resume viewing and scrub content
+    if (msg.includes("403") || /not\s+authorized|access\s+denied|forbidden/i.test(msg)) {
+      setIsAuthorized(false);
+      setTailoredMarkdown("");
+      setInitialResume("");
+      resumeLoadedRef.current = false;
+      setError(msg);
+      return true;
+    }
+    return false;
+  };
 
   // Safely check authentication only in client side
   useEffect(() => {
@@ -144,8 +168,35 @@ const handleAuthError = (err: any): boolean => {
       if (result) {
         console.log("Login successful. Token received:", result);
         setIsAuthenticated(true);
+        setIsAuthorized(true); // reset authz on fresh login
         const tokenPayload = JSON.parse(atob(result.idToken.split('.')[1]));
         setUserEmail(tokenPayload.email);
+        // If the user logged in while on the Resume tab, lazy-load their resume
+        if (activeTab === "resume") {
+          if (!(hasAnyResume() || resumeLoadedRef.current)) {
+            setIsLoadingResume(true);
+            setError(null);
+            try {
+              const response = await manageResume({ action: "load" });
+              if (response?.resume) {
+                setInitialResume(response.resume);
+                if (!tailoredMarkdown) setTailoredMarkdown(response.resume);
+                resumeLoadedRef.current = true;
+                setIsAuthorized(true);
+              } else if (response?.error) {
+                setError(response.error);
+              } else {
+                setError("No resume available for this account.");
+              }
+            } catch (err: any) {
+              if (!handleAuthError(err)) {
+                setError(err?.message || "Failed to load resume.");
+              }
+            } finally {
+              setIsLoadingResume(false);
+            }
+          }
+        }
       } else {
         console.error("Login failed: No result returned");
         setAuthError("Login failed. Please try again.");
@@ -162,12 +213,17 @@ const handleAuthError = (err: any): boolean => {
     await logout();
     setIsAuthenticated(false);
     setUserEmail(null);
+    setIsAuthorized(false);
+    setTailoredMarkdown("");
+    setInitialResume("");
+    resumeLoadedRef.current = false;
   };
 
   // Clear authentication errors when authenticated state changes
   useEffect(() => {
     // If the user becomes authenticated, clear any auth-related errors
     if (isAuthenticated) {
+      setIsAuthorized(true);
       setError((prevError) => {
         if (prevError && (
           prevError.includes("authentication") ||
@@ -237,14 +293,17 @@ const handleAuthError = (err: any): boolean => {
 
     // 1) If not logged in, show an error and stop
     if (!isAuthenticated) {
+      setIsAuthorized(false);
+      setTailoredMarkdown("");
+      setInitialResume("");
+      resumeLoadedRef.current = false;
       setError("Please login to view your resume.");
       setIsLoadingResume(false);
       return;
     }
 
-    // 2) If a resume is already loaded in state, do nothing
-    const hasResume = Boolean(tailoredMarkdown || initialResume);
-    if (hasResume) {
+    // 2) If a resume is already loaded in state or previously loaded, do nothing
+    if (hasAnyResume() || resumeLoadedRef.current) {
       setIsLoadingResume(false);
       return;
     }
@@ -257,6 +316,9 @@ const handleAuthError = (err: any): boolean => {
       if (response?.resume) {
         setInitialResume(response.resume);
         if (!tailoredMarkdown) setTailoredMarkdown(response.resume);
+        resumeLoadedRef.current = true;
+        // Successfully loaded resume implies the user is authorized to view it
+        setIsAuthorized(true);
       } else if (response?.error) {
         setError(response.error);
       } else {
@@ -312,8 +374,11 @@ const handleAuthError = (err: any): boolean => {
         }, 100)
 
         if (result.Tailored_Resume) {
-          setTailoredMarkdown(result.Tailored_Resume)
-          console.log("[v0] Tailored resume set, length:", result.Tailored_Resume.length)
+          setTailoredMarkdown(result.Tailored_Resume);
+          // Receiving a tailored resume indicates authorized access to resume content
+          setIsAuthorized(true);
+          resumeLoadedRef.current = true;
+          console.log("[v0] Tailored resume set, length:", result.Tailored_Resume.length);
         }
         setActiveTab("review")
         console.log("[v0] Switched to review tab")
@@ -790,7 +855,7 @@ const handleAuthError = (err: any): boolean => {
                       <p className="text-sm text-muted-foreground">Loading resume...</p>
                     </div>
                   </div>
-                ) : tailoredMarkdown || initialResume ? (
+                ) : (isAuthenticated && isAuthorized && (tailoredMarkdown || initialResume)) ? (
                   <div className="bg-white p-6 text-base text-s">
                      {showResumeTooltip && (
                     <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
@@ -811,6 +876,14 @@ const handleAuthError = (err: any): boolean => {
                     />
                   </div>
                 </div>
+                ) : !isAuthenticated ? (
+                  <div className="flex items-center justify-center h-32 text-muted-foreground">
+                    <p className="text-s">Please login to view your resume.</p>
+                  </div>
+                ) : !isAuthorized ? (
+                  <div className="flex items-center justify-center h-32 text-muted-foreground">
+                    <p className="text-s">You are not authorized to view a resume.</p>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-32 text-muted-foreground">
                     <p className="text-s">No resume available</p>
