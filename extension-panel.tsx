@@ -88,7 +88,8 @@ export default function Component() {
 
   // Reusable auth gate for API actions (keeps UX consistent)
   const ensureAuthenticated = (opts?: { withLoading?: boolean }): boolean => {
-    if (!isAuthenticated) {
+    // In demo mode, allow actions without being logged in
+    if (!isAuthenticated && !demoState) {
       setError("Please login in first and try again.");
       if (opts?.withLoading) {
         setIsLoading(false);
@@ -177,7 +178,7 @@ export default function Component() {
             setIsLoadingResume(true);
             setError(null);
             try {
-              const response = await manageResume({ action: "load" });
+              const response = await manageResume({ action: "load", demo: demoState });
               if (response?.resume) {
                 setInitialResume(response.resume);
                 if (!tailoredMarkdown) setTailoredMarkdown(response.resume);
@@ -291,8 +292,8 @@ export default function Component() {
     // Entering the resume tab: default to not loading; we'll flip to true only if we fetch
     setIsLoadingResume(false);
 
-    // 1) If not logged in, show an error and stop
-    if (!isAuthenticated) {
+    // 1) If not logged in, only block when NOT in demo mode
+    if (!isAuthenticated && !demoState) {
       setIsAuthorized(false);
       setTailoredMarkdown("");
       setInitialResume("");
@@ -312,7 +313,7 @@ export default function Component() {
     setIsLoadingResume(true);
     setError(null);
     try {
-      const response = await manageResume({ action: "load" });
+      const response = await manageResume({ action: "load", demo: demoState });
       if (response?.resume) {
         setInitialResume(response.resume);
         if (!tailoredMarkdown) setTailoredMarkdown(response.resume);
@@ -855,7 +856,7 @@ export default function Component() {
                       <p className="text-sm text-muted-foreground">Loading resume...</p>
                     </div>
                   </div>
-                ) : (isAuthenticated && isAuthorized && (tailoredMarkdown || initialResume)) ? (
+                ) : ((demoState || (isAuthenticated && isAuthorized)) && (tailoredMarkdown || initialResume)) ? (
                   <div className="bg-white p-6 text-base text-s">
                      {showResumeTooltip && (
                     <Tooltip title="Edit tailored resume" onClose={() => setShowResumeTooltip(false)}>
@@ -876,11 +877,11 @@ export default function Component() {
                     />
                   </div>
                 </div>
-                ) : !isAuthenticated ? (
+                ) : (!demoState && !isAuthenticated) ? (
                   <div className="flex items-center justify-center h-32 text-muted-foreground">
                     <p className="text-s">Please login to view your resume.</p>
                   </div>
-                ) : !isAuthorized ? (
+                ) : (!demoState && !isAuthorized) ? (
                   <div className="flex items-center justify-center h-32 text-muted-foreground">
                     <p className="text-s">You are not authorized to view a resume.</p>
                   </div>
