@@ -194,25 +194,6 @@ const handleAuthError = (err: any): boolean => {
         const url = await getCurrentTabUrl()
         setActiveTabUrl(url)
 
-        // // First, load the resume
-        // setIsLoadingResume(true)
-        // try {
-        //   const resumeResponse = await manageResume({ action: "load" })
-        //   console.log("[v0] Resume loaded successfully")
-        //   if (resumeResponse?.resume) {
-        //     setInitialResume(resumeResponse.resume)
-        //     setTailoredMarkdown(resumeResponse.resume) // Use initial resume as tailored markdown until we get a review
-        //     console.log("[v0] Resume content loaded, length:", resumeResponse.resume.length)
-        //   } else {
-        //     console.log("[v0] No resume content in response")
-        //   }
-        // } catch (resumeError) {
-        //   console.log("[v0] Failed to load resume:", resumeError)
-        // } finally {
-        //   setIsLoadingResume(false)
-        //   setIsInitialLoading(false) // End initial loading after resume is loaded
-        // }
-
         // Then, proceed with the job description loading
         if (demoState) {
           console.log("[v0] Demo_State is true, getting demo job description")
@@ -242,6 +223,46 @@ const handleAuthError = (err: any): boolean => {
 
     initializePanel()
   }, [demoState])
+
+  // Handle tab changes, especially for Resume tab
+  const handleTabChange = async (val: string) => {
+    // Switch the active tab immediately
+    setActiveTab(val);
+
+    // Only special-case the Resume tab
+    if (val !== "resume") return;
+
+    // 1) If not logged in, show an error and stop
+    if (!isAuthenticated) {
+      setError("Please login first to view your resume.");
+      return;
+    }
+
+    // 2) If a resume is already loaded in state, do nothing
+    const hasResume = Boolean(tailoredMarkdown || initialResume);
+    if (hasResume) return;
+
+    // 3) Otherwise, load resume from backend
+    setIsLoadingResume(true);
+    setError(null);
+    try {
+      const response = await manageResume({ action: "load" });
+      if (response?.resume) {
+        setInitialResume(response.resume);
+        if (!tailoredMarkdown) setTailoredMarkdown(response.resume);
+      } else if (response?.error) {
+        setError(response.error);
+      } else {
+        setError("No resume available for this account.");
+      }
+    } catch (err: any) {
+      if (!handleAuthError(err)) {
+        setError(err?.message || "Failed to load resume.");
+      }
+    } finally {
+      setIsLoadingResume(false);
+    }
+  };
 
   const getFitScoreStyle = (score: number | null) => {
     if (score === null) return "bg-gray-200 text-gray-800"
@@ -499,7 +520,7 @@ const handleAuthError = (err: any): boolean => {
           </div>
         </div>
       ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col">
           <TabsList className="grid w-full grid-cols-5 m-4 mb-0 justify-center">
             <TabsTrigger value="job-description" className="flex items-center gap-1">
               JD
@@ -507,7 +528,7 @@ const handleAuthError = (err: any): boolean => {
             <TabsTrigger value="review" className="flex items-center gap-1" disabled={!review}>
               Review
             </TabsTrigger>
-            <TabsTrigger value="resume" className="flex items-center gap-1" disabled={!tailoredMarkdown && !initialResume}>
+            <TabsTrigger value="resume" className="flex items-center gap-1">
               Resume
             </TabsTrigger>
             <TabsTrigger value="application" className="flex items-center gap-1">
