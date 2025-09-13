@@ -8,6 +8,6 @@ The AI Recruiting Agent maximizes your chances of landing an interview! The AI R
 * [Future] Auto-complete the job application forms on your behalf!
 * [Future] Identifies relevant 1st and 2nd degree contacts for networking into the job
 
-Behind the scenes, the AI Recruiting Agent leverages OpenAI's LLM models and custom AI-pipeline incorporating 
-the developer's years of career coaching and recruiting experience.
+Behind the scenes, the AI Recruiting Agent uses a custom AI-pipeline incorporating 
+the developer's years of career coaching and recruiting experience and OpenAI's latest LLM models.
 
