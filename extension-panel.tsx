@@ -544,7 +544,13 @@ export default function Component() {
           </div>
         </div>
         <div className="flex flex-col items-end">
-          <div className="text-xs bg-gray-100 px-2 py-1 rounded">Demo: {demoState ? "ON" : "OFF"}</div>
+          <div
+  className={`text-xs px-2 py-1 rounded ${
+    demoState ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+  }`}
+>
+  Demo {demoState ? "ON" : "OFF"}
+</div>
           {isAuthenticated ? (
             <div className="flex items-center gap-1 mt-1 text-xs">
               <span className="text-green-800 flex items-center gap-1">
@@ -617,11 +623,10 @@ export default function Component() {
 
               {showJDTooltip && (
                 <Tooltip title="Sample Job and Resume" onClose={() => setShowJDTooltip(false)}>
-                  Paste your job description into the text area to get started. Generating a review takes up to 2 minutes.
-                  <br />
-                  <br />
                   Submit the job description below to see a demo review and redlined resume.
-                  "
+                    <br />
+                  <br />
+                    Paste your own job description into the text area to exit demo. Generating a review can take as long as 2 minutes.
                 </Tooltip>
               )}
 
