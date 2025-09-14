@@ -1,14 +1,23 @@
-# /home/<your_pa_username>/mysite/app.py
-from flask import Flask, Response
+# # /home/<your_pa_username>/mysite/app.py
+# from flask import Flask, Response
+# import os, base64
+from fastapi import APIRouter, Response
 import os, base64
 
-app = Flask(__name__)
+
+# app = Flask(__name__)
+router = APIRouter()
+
 
 def _nonce(n=16):
     return base64.urlsafe_b64encode(os.urandom(n)).decode().rstrip("=")
 
-@app.route("/oauth2cb")
+
+# @app.route("/oauth2cb")
+# def oauth2cb():
+@router.get("/oauth2cb")
 def oauth2cb():
+    """Redirects OAuth2 callback endpoint for Chrome extension."""
     ext_id = "oblgighcolckndbinadplmmmebjemido"   # your extension ID
     nonce = _nonce()
 
@@ -24,7 +33,8 @@ def oauth2cb():
 <noscript>JavaScript required for redirect.</noscript>
 """
 
-    resp = Response(html, mimetype="text/html")
+    # resp = Response(html, mimetype="text/html")
+    resp = Response(content=html, media_type="text/html")
 
     # Strict caching + security headers
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"

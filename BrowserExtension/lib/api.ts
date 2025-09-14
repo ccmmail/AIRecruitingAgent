@@ -62,12 +62,15 @@ export interface JobDescriptionResponse {
 }
 
 function getBackendUrl(): string {
-  // Try to get from window (injected during build)
-  if (typeof window !== "undefined" && (window as any).__BACKEND_URL__) {
-    return (window as any).__BACKEND_URL__
-  }
-  // Fallback to environment variable
-  return process.env.BACKEND_URL || "http://localhost:8000"
+  // // Try to get from window (injected during build)
+  // if (typeof window !== "undefined" && (window as any).__BACKEND_URL__) {
+  //   return (window as any).__BACKEND_URL__
+  // }
+  // // Fallback to environment variable
+  // return process.env.BACKEND_URL || "http://localhost:8000"
+
+  // hardcode for deployment testing
+  return "https://airecruitingagent.pythonanywhere.com"
 }
 
 // Get stored auth token

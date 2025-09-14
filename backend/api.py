@@ -1,6 +1,6 @@
 """APIs for generating a resume review and changes tailored to a given job description."""
 
-from fastapi import FastAPI, Depends, Security
+from fastapi import FastAPI, Security
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
@@ -12,10 +12,12 @@ import json
 from dotenv import load_dotenv
 from .redline import redline_diff
 from .security import check_authorized_user, verify_token, security
+from .oauth2cb import router as oauth_router
 
 
 # Load environment variables from .env file
 load_dotenv()
+
 # Define the directory paths for working files
 BASE_DIR = Path(__file__).resolve().parent.parent
 USER_DIR = BASE_DIR / "user"
@@ -40,15 +42,13 @@ JOB_DESCRIPTION_DEMO_FILE = DEMO_DIR / "job_description_demo.txt"
 RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = DEMO_DIR / "API_response_review_add_info_demo.json"
 RESPONSE_REVIEW_DEMO_FILE = DEMO_DIR / "API_response_review_demo.json"
 
-
 # Initialize OpenAI client and LangSmith tracer
 LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
 langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
 
-
-# Start the FastAPI app by setting up temp dir & working files
+# Setup the FastAPI app by setting up temp dir & working files
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Setup temp working directory on startup."""
@@ -71,7 +71,7 @@ async def lifespan(app: FastAPI):
     ## cleanup items here
     # none for now
 
-
+# setup routes and middleware
 app = FastAPI(debug=True, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
@@ -83,6 +83,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["Authorization", "Content-Type"],
 )
+app.include_router(oauth_router)  # Mount the /oauth2cb router
 
 
 @traceable(name="prompt_LLM")
