@@ -1,11 +1,6 @@
-## Technical Notes for Airecruiting Browser Extension
+## Instructions for syncing with v0.dev 
 
-### 1. Setup for production
-
-Oauth2cb.py needs to be deployed to airecruiting.pythonanywhere.com for authentication to work
-
-
-### 2. Sync changes from v0-dev branch → main/BrowserExtension/
+### Sync changes from v0-dev branch → main/BrowserExtension/
 
 git checkout main
 

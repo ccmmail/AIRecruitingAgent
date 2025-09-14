@@ -10,6 +10,10 @@ async function buildExtension() {
   try {
     console.log("🏗️  Building AI Recruiting Agent Extension (Full Experience)...")
 
+    // Determine backend URL for build and manifest
+    const backendUrl = process.env.BACKEND_URL || "https://airecruitingagent.pythonanywhere.com";
+    console.log(`🔧 Using BACKEND_URL = ${backendUrl}`);
+
     // Clean build directory
     await fs.remove(buildDir)
     await fs.ensureDir(buildDir)
@@ -64,7 +68,7 @@ window.__EXTENSION_CONTEXT__ = {
 
 window.__ENABLE_DEMO_MODE__ = true;
 
-window.__BACKEND_URL__ = "${process.env.BACKEND_URL || "http://localhost:8000"}";
+window.__BACKEND_URL__ = "${backendUrl}";
 
 // Next.js inline scripts
 ${inlineScripts.join("\n\n")}
@@ -110,6 +114,19 @@ ${inlineScripts.join("\n\n")}
             matches: ["<all_urls>"],
           },
         ]
+
+        // Ensure host_permissions contains the chosen BACKEND_URL origin
+        try {
+          const url = new URL(backendUrl);
+          const originPattern = `${url.protocol}//${url.host}/*`;
+          manifest.host_permissions = manifest.host_permissions || [];
+          if (!manifest.host_permissions.includes(originPattern)) {
+            manifest.host_permissions.push(originPattern);
+            console.log(`🧩 Added host_permission for ${originPattern}`);
+          }
+        } catch (e) {
+          console.warn("⚠️ Could not parse BACKEND_URL to add host_permissions:", e);
+        }
 
         await fs.writeJson(manifestPath, manifest, { spaces: 2 })
       }

@@ -11,8 +11,10 @@
     "sidePanel"
   ],
   "host_permissions": [
+    "https://airecruitingagent.pythonanywhere.com/*",
     "http://localhost:8000/*",
-    "https://*/*",
+    "https://www.googleapis.com/*",
+    "https://oauth2.googleapis.com/*",
     "https://accounts.google.com/*"
   ],
   "action": {

@@ -6,4 +6,4 @@ python-dotenv~=1.0.0
 pytest~=8.3.4
 starlette~=0.47.2
 langsmith~=0.4.6
-python-jose~=3.5.0
+google-auth~=2.28.0

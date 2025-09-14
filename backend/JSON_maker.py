@@ -1,4 +1,4 @@
-"""Utility program to create the JSON temp files."""
+"""Utility program to create the JSON temp and demo files."""
 import json
 from pathlib import Path
 from backend.api import create_resume_diff

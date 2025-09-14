@@ -62,15 +62,22 @@ export interface JobDescriptionResponse {
 }
 
 function getBackendUrl(): string {
-  // // Try to get from window (injected during build)
-  // if (typeof window !== "undefined" && (window as any).__BACKEND_URL__) {
-  //   return (window as any).__BACKEND_URL__
-  // }
-  // // Fallback to environment variable
-  // return process.env.BACKEND_URL || "http://localhost:8000"
+  // Prefer value injected at build-time by build-extension.js (window.__BACKEND_URL__)
+  try {
+    if (typeof window !== "undefined" && (window as any).__BACKEND_URL__) {
+      return (window as any).__BACKEND_URL__ as string;
+    }
+  } catch {}
 
-  // hardcode for deployment testing
-  return "https://airecruitingagent.pythonanywhere.com"
+  // Fallback to a compile-time env var if available (safe-guarded for browser)
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pe = (typeof process !== "undefined" ? (process as any).env : undefined);
+    if (pe?.BACKEND_URL) return pe.BACKEND_URL as string;
+  } catch {}
+
+  // Final fallback (prod)
+  return "https://airecruitingagent.pythonanywhere.com";
 }
 
 // Get stored auth token

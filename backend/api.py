@@ -104,7 +104,7 @@ def create_resume_diff(baseline:str, revised:str) -> str:
     return redline_diff(baseline, revised)
 
 
-@app.get("/")
+@app.get("/health")
 def show_heartbeat():
     """Return a message to show API is up."""
     return {"message": "Hello World"}
