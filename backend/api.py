@@ -12,7 +12,7 @@ import json
 from dotenv import load_dotenv
 from .redline import redline_diff
 from .security import check_authorized_user, verify_token, security
-from .oauth2cb import router as oauth_router
+from .security import router as oauth_router
 
 
 # Load environment variables from .env file
