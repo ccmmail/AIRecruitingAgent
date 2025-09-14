@@ -13,11 +13,11 @@ function isChromeExtension(): boolean {
   }
 }
 
-// bounce needed since chrome extension wasn't binding properly in Google Cloud Console
-const AUTH_REDIRECT_URI = 'https://airecruitingagent.pythonanywhere.com/oauth2cb';
 // Authentication configuration
+// bounce needed since chrome extension wasn't binding properly in Google Cloud Console
 const CHROME_EXTENSION_CLIENT_ID =
   '258289407737-mdh4gleu91oug8f5g8jqkt75f62te9kv.apps.googleusercontent.com'; // for airecruitingagent.pythonanywhere.com
+const AUTH_REDIRECT_URI = 'https://airecruitingagent.pythonanywhere.com/oauth2cb';
 
 export const AUTH_CONFIG = {
   clientId: CHROME_EXTENSION_CLIENT_ID,              // <- explicit, no manifest dependency
