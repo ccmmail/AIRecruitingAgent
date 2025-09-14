@@ -29,10 +29,20 @@ Note: The code is a work-in-progress. It is not intended for use by anyone other
 
 ### Compiling the browser extension
 
-Run the following command from the /BrowserExtension directory to build the browser extension and:
-- Use the production backend: npm run build-extension. 
-- Use a local backend: BACKEND_URL=http://localhost:8000 npm run build-extension
+Run the following command from the /BrowserExtension directory to build the browser extension: 
+- To use the production backend: npm run build-extension. 
+- To use a local backend: BACKEND_URL=http://localhost:8000 npm run build-extension
 
+
+### Deploying on PythonAnywhere
+
+1. Firstly, create a FastAPI ASGI app
+   - pa website create --domain airecruitingagent.pythonanywhere.com \
+  --command '/home/airecruitingagent/.virtualenvs/airecruitingagent-venv/bin/uvicorn --app-dir /home/airecruitingagent/airecruitingagent --uds ${DOMAIN_SOCKET} backend.api:app'
+2. After each code update:
+   - cd ~/airecruitingagent
+   - git pull origin main
+   - pa website reload --domain airecruitingagent.pythonanywhere.com
 
 
 
