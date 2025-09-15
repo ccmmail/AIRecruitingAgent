@@ -6,17 +6,24 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as grequests
 from dotenv import load_dotenv, find_dotenv
 import os, base64
+from pathlib import Path
 
-# try loading .env from the *current working dir* and walking upwards to project root
-try:
-    env_path = find_dotenv(filename=".env", usecwd=True)
-    if env_path:
-        load_dotenv(env_path, override=False)
-        print(f"[startup] Loaded .env from: {env_path}")
-    else:
-        print("[startup] .env not found via find_dotenv()")
-except Exception as e:
-    print(f"[startup] dotenv load skipped/failed: {e}")
+
+# # try loading .env from the *current working dir* and walking upwards to project root
+# try:
+#     env_path = find_dotenv(filename=".env", usecwd=True)
+#     if env_path:
+#         load_dotenv(env_path, override=False)
+#         print(f"[startup] Loaded .env from: {env_path}")
+#     else:
+#         print("[startup] .env not found via find_dotenv()")
+# except Exception as e:
+#     print(f"[startup] dotenv load skipped/failed: {e}")
+
+# Load environment variables from .env file
+REPO_ROOT = Path(__file__).resolve().parents[1]
+ENV_FILE = REPO_ROOT / ".env"
+load_dotenv(dotenv_path=ENV_FILE, override=False)
 
 
 # --- replace your helper(s) with these ---

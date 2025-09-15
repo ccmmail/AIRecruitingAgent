@@ -17,7 +17,9 @@ from .security import router as oauth_router
 
 
 # Load environment variables from .env file
-load_dotenv()
+REPO_ROOT = Path(__file__).resolve().parents[1]
+ENV_FILE = REPO_ROOT / ".env"
+load_dotenv(dotenv_path=ENV_FILE, override=False)
 
 # Define the directory paths for working files
 BASE_DIR = Path(__file__).resolve().parent.parent
