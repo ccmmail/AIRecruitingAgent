@@ -53,9 +53,9 @@
   .module { background: var(--card); border: 1px solid #1d2647; border-radius: var(--radius); overflow: clip; box-shadow: var(--shadow); }
   .module-inner { display: grid; gap: 10px; padding: 12px; }
   .shot { width: 50%; height: auto; display:block; background:#0c1224; margin: 0 auto; }
-  .kicker { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-  .h3 { font-size: clamp(18px, 3vw, 22px); margin: 2px 0; }
-  .copy { color: #c7d6ff; font-size: 14px; line-height: 1.45; }
+  .kicker { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-left: 10px}
+  .h3 { font-size: clamp(18px, 3vw, 22px); margin: 2px 0; margin-left: 10px;}
+  .copy { color: #c7d6ff; font-size: 14px; line-height: 1.45; margin-left: 10px; }
   .list { margin: 10px 0 0 18px; color: #c7d6ff; }
   .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid #2d3a67; border-radius:999px; font-size:12px; color: #c7d6ff; white-space: normal; max-width: 100%; line-height: 1.25; }
   footer { color: var(--muted); font-size: 12px; padding: 28px 0 36px; text-align:center;}
@@ -69,17 +69,38 @@
       grid-template-columns: 1fr 1fr;
     }
   }
-  /* Side-by-side commentary for larger screens */
-  .feature {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-  @media (min-width: 820px) {
-    .feature {
-      grid-template-columns: 1.2fr .9fr;
-      align-items: center;
+/* Side-by-side commentary for larger screens */
+.feature {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+    /* Desktop / wide screens */
+    @media (min-width: 820px) {
+      .feature {
+        grid-template-columns: 1.2fr .9fr;
+        align-items: center;
+      }
+      .feature:nth-child(even) {
+        grid-template-columns: .9fr 1.2fr;
+      }
+      .feature:nth-child(even) img.shot {
+        order: 2;
+      }
+      .feature:nth-child(even) .module-inner {
+        order: 1;
+      }
     }
-  }
+
+    /* Mobile / narrow screens: copy first, image second */
+    @media (max-width: 819px) {
+      .feature img.shot {
+        order: 2;
+      }
+      .feature .module-inner {
+        order: 1;
+      }
+    }
   .note { font-size:12px; color:#9fb3ff; }
   .logos { display:flex; gap: 8px; flex-wrap: wrap; }
   .logos .pill { background: rgba(255,255,255,.02); }
