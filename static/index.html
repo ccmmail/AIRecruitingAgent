@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Recruiting Agent — Get Interviews Faster</title>
+<meta name="description" content="AI Recruiting Agent: assess your resume vs. any job, close gaps with targeted prompts, and export a tailored, ATS-friendly resume." />
+<style>
+  :root {
+    --bg: #0b1020;
+    --card: #11172b;
+    --ink: #e8eefc;
+    --muted: #9db1ff;
+    --brand: #6da8ff;
+    --accent: #28c890;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--ink); }
+  a { color: var(--brand); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 20px; }
+  header {
+    display: grid; gap: 12px; padding: 28px 0 10px;
+  }
+  .badge { display: inline-flex; align-items:center; gap:8px; font-size:12px; padding:6px 10px; border-radius:999px; background: #0f224a; color: var(--muted); border: 1px solid #1f305e;}
+  .hero {
+    display: grid; gap: 14px;
+  }
+  .title { font-size: clamp(28px, 6vw, 52px); line-height:1.05; letter-spacing:-.02em; margin-bottom: 6px; }
+  .subtitle { font-size: clamp(14px, 2.8vw, 18px); color: var(--muted); max-width: none; }
+  .cta-row { display:flex; gap:12px; flex-wrap: wrap; margin-top: 6px; }
+  .btn {
+    appearance: none; border: 0; border-radius: 999px; padding: 12px 18px; font-weight: 600; cursor: pointer;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--brand), #5a7bff 60%); color: white; box-shadow: var(--shadow); }
+  .btn-secondary { background: transparent; color: var(--ink); border: 1px solid #2d3a67; }
+  .trust { display:flex; align-items:center; gap: 12px; color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .grid { display: grid; gap: 16px; }
+  .module { background: var(--card); border: 1px solid #1d2647; border-radius: var(--radius); overflow: clip; box-shadow: var(--shadow); }
+  .module-inner { display: grid; gap: 10px; padding: 12px; }
+  .shot { width: 50%; height: auto; display:block; background:#0c1224; margin: 0 auto; }
+  .kicker { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .h3 { font-size: clamp(18px, 3vw, 22px); margin: 2px 0; }
+  .copy { color: #c7d6ff; font-size: 14px; line-height: 1.45; }
+  .list { margin: 10px 0 0 18px; color: #c7d6ff; }
+  .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid #2d3a67; border-radius:999px; font-size:12px; color: #c7d6ff; }
+  footer { color: var(--muted); font-size: 12px; padding: 28px 0 36px; text-align:center;}
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  @media (min-width: 820px) {
+    .cols {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  /* Side-by-side commentary for larger screens */
+  .feature {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 820px) {
+    .feature {
+      grid-template-columns: 1.2fr .9fr;
+      align-items: center;
+    }
+  }
+  .note { font-size:12px; color:#9fb3ff; }
+  .logos { display:flex; gap: 8px; flex-wrap: wrap; }
+  .logos .pill { background: rgba(255,255,255,.02); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge">🚀 AI Recruiting Agent</span>
+      <div class="hero">
+        <h1 class="title">Tailor your career narrative and resume to any job — in seconds.</h1>
+        <p class="subtitle">Maximize your chances of landing an interview. Paste a job description, get an instant assessment, close the gaps with targeted questions, and export a clean, ATS‑ready resume with redlined suggestions. Our AI works with you to optimize your resume, and soon will even complete the job application and identify people for networking into the job!</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#demo">Try the demo</a>
+        </div>
+        <div class="trust">
+          <span class="pill">Perfect job alignment</span>
+          <span class="pill">ATS Optimization</span>
+          <span class="pill">Privacy by design</span>
+          <span class="pill">Expert Guidance</span>
+          <span class="pill">Chrome plugin</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="grid" id="demo">
+      <!-- Feature 1: Paste JD -->
+      <section class="module feature">
+        <img class="shot" src="/static/1. Job description.png" alt="Paste job description screen" />
+        <div class="module-inner">
+          <span class="kicker">Step 1: Job Analysis</span>
+          <h3 class="h3">Smart Job Description Analysis</h3>
+          <p class="copy">Simply paste any job description and our AI immediately begins analyzing the requirements, skills, and experience needed. Our Chrome extension makes this process effortless.</p>
+          <ul class="list">
+            <li>Automatic requirement extraction</li>
+            <li>Skills gap identification</li>
+            <li>Chrome extension integration</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Feature 2: Fit & Gaps -->
+      <section class="module feature">
+        <img class="shot" src="/static/2. Assessment of fit and gaps against job requirements.png" alt="Assessment and gap map" />
+        <div class="module-inner">
+          <span class="kicker">Step 2: Fit Analysis</span>
+          <h3 class="h3">Precise Job Fit Scoring</h3>
+          <p class="copy">Get an instant score to see how well your current resume aligns with the job requirements. Our AI provides detailed gap analysis and specific recommendations for improvement.</p>
+          <ul class="list">
+            <li>Transparent scoring with rationale</li>
+            <li>Item-by-item requirement analysis</li>
+            <li>Actionable improvement suggestions, not fluff</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Feature 3: Ask questions -->
+      <section class="module feature">
+        <img class="shot" src="/static/3. Interview questions for additional relevant information.png" alt="Follow-up questions UI" />
+        <div class="module-inner">
+          <span class="kicker">Step 3: Deep Discovery</span>
+          <h3 class="h3">Hidden Strengths & Qualifications</h3>
+          <p class="copy">Our AI conducts an intelligent interview to discover relevant experience and skills that might not be prominently featured on your current resume. This ensures no valuable qualification goes unnoticed.</p>
+          <ul class="list">
+            <li>Targeted experience discovery</li>
+            <li>Hidden skills identification</li>
+            <li>Present the most relevant qualifications</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Feature 4: Re-Scored Review -->
+      <section class="module feature">
+        <img class="shot" src="/static/4. Adjusted assessment based on additional information.png" alt="Updated analysis after answers" />
+        <div class="module-inner">
+          <span class="kicker">Step 4: Refinement</span>
+          <h3 class="h3">The Best You For The Job</h3>
+          <p class="copy">Get a refreshed fit score and gap map with your answers, so you know exactly what moved the needle. Continue iterating with our AI until you are satisfied.</p>
+          <ul class="list">
+            <li>Instant re‑evaluation</li>
+            <li>Traceable changes</li>
+            <li>Clear next actions</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Feature 5: Redlined Resume -->
+      <section class="module feature">
+        <img class="shot" src="/static/5. Recommended redlined changes to resume.png" alt="Redlined resume suggestions" />
+        <div class="module-inner">
+          <span class="kicker">Step 5: Your best you</span>
+          <h3 class="h3">Polished, ATS‑ready resume</h3>
+          <p class="copy">Get a reframed resume that tells your story in the most compelling way for this specific role. Our AI restructures content, optimizes keywords for ATS systems, and highlights the most relevant achievements.</p>
+          <ul class="list">
+            <li>Job-specific narrative framing</li>
+            <li>Strategic content restructuring</li>
+            <li>ATS keyword optimization</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div style="margin-bottom:10px;">
+        <a class="btn btn-primary" href="#demo">Try the demo</a>
+      </div>
+    </br>
+      <div>© AI Recruiting Agent — crafted for faster, fairer hiring.</div>
+    </footer>
+  </div>
+</body>
+</html>

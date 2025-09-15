@@ -2,6 +2,8 @@
 
 from fastapi import FastAPI, Security
 from starlette.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from starlette.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from openai import OpenAI
@@ -26,6 +28,7 @@ USER_DIR = BASE_DIR / "user"
 PROMPT_DIR = BASE_DIR / "prompts"
 TEMP_DIR = BASE_DIR / "temp"
 DEMO_DIR = BASE_DIR / "demo"
+STATIC_DIR = BASE_DIR / "static"
 # User data
 RESUME_FILE = USER_DIR / "resume.txt"
 ADDITIONAL_EXPERIENCE_FILE = USER_DIR / "additional_candidate_info.txt"
@@ -87,6 +90,15 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 app.include_router(oauth_router)  # Mount the /oauth2cb router
+
+# Serve static files at /static
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# Splash page at site root
+@app.get("/", include_in_schema=False)
+def splash():
+    """Serve the marketing splash page."""
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 def create_review_prompt(job_description: str) -> str:
