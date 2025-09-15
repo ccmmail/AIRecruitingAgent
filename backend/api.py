@@ -1,7 +1,6 @@
 """APIs for generating a resume review and changes tailored to a given job description."""
 
 from fastapi import FastAPI, Security
-from typing import Optional
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
