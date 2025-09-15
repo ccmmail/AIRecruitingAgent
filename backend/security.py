@@ -19,17 +19,39 @@ except Exception as e:
     print(f"[startup] dotenv load skipped/failed: {e}")
 
 
+# --- replace your helper(s) with these ---
+def _clean_env(s: str | None) -> str:
+    # Trim whitespace and surrounding quotes
+    return (s or "").strip().strip(' "\'')
+
+
 def _parse_list(env_name: str) -> set[str]:
-    """Parse comma-separated list from environment variable into a set of lowercase strings."""
-    raw = os.getenv(env_name, "")
-    return {x.strip().lower() for x in raw.split(",") if x.strip()}
+    """
+    Parse a comma-separated env var into a lowercase set.
+    Handles surrounding quotes on the full value and on each item.
+    """
+    raw = _clean_env(os.getenv(env_name))
+    if not raw:
+        return set()
+    items = []
+    for part in raw.split(","):
+        p = part.strip().strip(' "\'')
+        if p:
+            items.append(p.lower())
+    return set(items)
 
 
 # Set up the HTTP Bearer security scheme and allowed users/domains
 security = HTTPBearer(auto_error=False)
-GOOGLE_WEB_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID")
-ALLOWED_EMAILS = _parse_list("ALLOWED_EMAILS")  # e.g., "fam@cheongfamily.com, ccmmail@gmail.com"
-ALLOWED_DOMAINS = _parse_list("ALLOWED_DOMAINS")  # optional e.g., "udemy.com"
+GOOGLE_WEB_CLIENT_ID = _clean_env(os.getenv("GOOGLE_WEB_CLIENT_ID"))
+ALLOWED_EMAILS = _parse_list("ALLOWED_EMAILS")
+ALLOWED_DOMAINS = _parse_list("ALLOWED_DOMAINS")
+
+# --- temporary diagnostics (remove later) ---
+print("[auth] GOOGLE_WEB_CLIENT_ID =", repr(GOOGLE_WEB_CLIENT_ID))
+print("[auth] ALLOWED_EMAILS      =", sorted(list(ALLOWED_EMAILS)))
+print("[auth] ALLOWED_DOMAINS     =", sorted(list(ALLOWED_DOMAINS)))
+
 
 router = APIRouter()
 
