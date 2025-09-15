@@ -21,12 +21,11 @@ from pathlib import Path
 #     print(f"[startup] dotenv load skipped/failed: {e}")
 
 # Load environment variables from .env file
-REPO_ROOT = Path(__file__).resolve().parents[1]
-ENV_FILE = REPO_ROOT / ".env"
-load_dotenv(dotenv_path=ENV_FILE, override=False)
+# REPO_ROOT = Path(__file__).resolve().parents[1]
+# ENV_FILE = REPO_ROOT / ".env"
+# load_dotenv(dotenv_path=ENV_FILE, override=False)
 
 
-# --- replace your helper(s) with these ---
 def _clean_env(s: str | None) -> str:
     # Trim whitespace and surrounding quotes
     return (s or "").strip().strip(' "\'')
