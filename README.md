@@ -45,4 +45,20 @@ Run the following command from the /BrowserExtension directory to build the brow
    - pa website reload --domain airecruitingagent.pythonanywhere.com
 
 
+### Syncing with v0.dev (deprecated; section for historical reference only) 
+
+The chrome extension was originally vibe-coded using v0.dev, but has since been heavily modified. The v0.dev branch is no longer kept current. However, I've kept instructions here on how to keep the two repos in sync for legacy purposes.
+
+- Sync changes from main/BrowserExtension/ → v0-dev branch
+  1. git checkout main 
+  2. git pull
+  3. git add BrowserExtension 
+  4. git commit -m "Update BrowserExtension"
+  5. git subtree push --prefix=BrowserExtension origin v0-dev
+- Sync changes from v0-dev branch → main/BrowserExtension/
+  1. git checkout main
+  2. git pull
+  3. git subtree pull --prefix=BrowserExtension origin v0-dev --squash -m “v0.dev pull”
+  4. git push
+
 
