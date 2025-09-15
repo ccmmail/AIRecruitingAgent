@@ -67,12 +67,10 @@ export default function Component() {
   const [showRedlines, setShowRedlines] = useState(true)
   const [questionAnswers, setQuestionAnswers] = useState<Record<number, string>>({})
   const [isSubmittingQuestions, setIsSubmittingQuestions] = useState(false)
-  const [questionsSubmitted, setQuestionsSubmitted] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState(false)
   const [showJDTooltip, setShowJDTooltip] = useState(true)
   const [showReviewTooltip, setShowReviewTooltip] = useState(true)
   const [showResumeTooltip, setShowResumeTooltip] = useState(true)
-  const [showEditingTooltip, setShowEditingTooltip] = useState(true)
   const [demoState, setDemoState] = useState(true)
   const [initialResume, setInitialResume] = useState("")
   const [isLoadingResume, setIsLoadingResume] = useState(false)
@@ -85,6 +83,83 @@ export default function Component() {
 
   // Track if a resume has been loaded during this session
   const resumeLoadedRef = useRef(false)
+
+  // Track previous demoState for effect
+  const previousDemoRef = useRef(demoState)
+
+  // On initialization (and whenever we are in demo), load the demo resume once
+  useEffect(() => {
+    if (demoState && !resumeLoadedRef.current) {
+      (async () => {
+        setIsLoadingResume(true);
+        setError(null);
+        try {
+          const response = await manageResume({ action: "load", demo: true });
+          if (response?.resume) {
+              setInitialResume(response.resume);
+              // Overwrite any prior demo/tailored text so the Resume tab shows the real one
+              setTailoredMarkdown(response.resume);
+              resumeLoadedRef.current = true;
+              setIsAuthorized(true);
+          } else if (response?.error) {
+            setError(response.error);
+          } else {
+            setError("No resume available");
+          }
+        } catch (err: any) {
+          if (!handleAuthError(err)) {
+            setError(err?.message || "Failed to load demo resume.");
+          }
+        } finally {
+          setIsLoadingResume(false);
+        }
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoState]);
+
+// Track previous auth state to detect login transitions
+const previousAuthRef = useRef(isAuthenticated);
+
+// When a user logs in (false -> true), leave demo and load resume once
+useEffect(() => {
+  if (previousAuthRef.current === false && isAuthenticated === true) {
+    // force a re-fetch even if demo resume was present
+    resumeLoadedRef.current = false;
+    if (demoState) setDemoState(false); // leave demo on login
+
+    (async () => {
+      setIsLoadingResume(true);
+      setError(null);
+      try {
+        const response = await manageResume({ action: "load", demo: false });
+        if (response?.resume) {
+          setInitialResume(response.resume);
+          // Always overwrite any prior demo/tailored text with the authenticated resume
+          setTailoredMarkdown(response.resume);
+          resumeLoadedRef.current = true;
+          setIsAuthorized(true);
+        } else if (response?.error) {
+          setIsAuthorized(false);
+          setTailoredMarkdown("");
+          setInitialResume("");
+          resumeLoadedRef.current = false;
+          setError(response.error);
+        } else {
+          setError("No resume available for this account.");
+        }
+      } catch (err: any) {
+        if (!handleAuthError(err)) {
+          setError(err?.message || "Failed to load resume.");
+        }
+      } finally {
+        setIsLoadingResume(false);
+      }
+    })();
+  }
+  previousAuthRef.current = isAuthenticated;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [isAuthenticated]);
 
   // Reusable auth gate for API actions (keeps UX consistent)
   const ensureAuthenticated = (opts?: { withLoading?: boolean }): boolean => {
@@ -172,32 +247,7 @@ export default function Component() {
         setIsAuthorized(true); // reset authz on fresh login
         const tokenPayload = JSON.parse(atob(result.idToken.split('.')[1]));
         setUserEmail(tokenPayload.email);
-        // If the user logged in while on the Resume tab, lazy-load their resume
-        if (activeTab === "resume") {
-          if (!(hasAnyResume() || resumeLoadedRef.current)) {
-            setIsLoadingResume(true);
-            setError(null);
-            try {
-              const response = await manageResume({ action: "load", demo: demoState });
-              if (response?.resume) {
-                setInitialResume(response.resume);
-                if (!tailoredMarkdown) setTailoredMarkdown(response.resume);
-                resumeLoadedRef.current = true;
-                setIsAuthorized(true);
-              } else if (response?.error) {
-                setError(response.error);
-              } else {
-                setError("No resume available for this account.");
-              }
-            } catch (err: any) {
-              if (!handleAuthError(err)) {
-                setError(err?.message || "Failed to load resume.");
-              }
-            } finally {
-              setIsLoadingResume(false);
-            }
-          }
-        }
+        setDemoState(false); // flip demo off on login; the login effect will load resume
       } else {
         console.error("Login failed: No result returned");
         setAuthError("Login failed. Please try again.");
@@ -218,6 +268,8 @@ export default function Component() {
     setTailoredMarkdown("");
     setInitialResume("");
     resumeLoadedRef.current = false;
+    setError(null);
+    // setDemoState(true); // return to demo on logout
   };
 
   // Clear authentication errors when authenticated state changes
@@ -301,36 +353,6 @@ export default function Component() {
       setError("Please login to view your resume.");
       setIsLoadingResume(false);
       return;
-    }
-
-    // 2) If a resume is already loaded in state or previously loaded, do nothing
-    if (hasAnyResume() || resumeLoadedRef.current) {
-      setIsLoadingResume(false);
-      return;
-    }
-
-    // 3) Otherwise, load resume from backend
-    setIsLoadingResume(true);
-    setError(null);
-    try {
-      const response = await manageResume({ action: "load", demo: demoState });
-      if (response?.resume) {
-        setInitialResume(response.resume);
-        if (!tailoredMarkdown) setTailoredMarkdown(response.resume);
-        resumeLoadedRef.current = true;
-        // Successfully loaded resume implies the user is authorized to view it
-        setIsAuthorized(true);
-      } else if (response?.error) {
-        setError(response.error);
-      } else {
-        setError("No resume available for this account.");
-      }
-    } catch (err: any) {
-      if (!handleAuthError(err)) {
-        setError(err?.message || "Failed to load resume.");
-      }
-    } finally {
-      setIsLoadingResume(false);
     }
   };
 
@@ -651,7 +673,10 @@ export default function Component() {
                   setJobDescription(e.target.value)
                   if (demoState) {
                     console.log("[v0] User modified job description, setting Demo_State to false")
-                    setDemoState(false)
+                    setDemoState(false);
+                    setTailoredMarkdown("");
+                    setInitialResume("");
+                    resumeLoadedRef.current = false;
                   }
                 }}
                 className="min-h-[200px] text-s"
@@ -907,7 +932,7 @@ export default function Component() {
               </div>
               <div className="flex items-center justify-center text-muted-foreground h-6">
                 <p className="text-sm">
-                  To make it easier and quicker to apply to jobs, I'm working on being able fill out the application for you... under your supervision! 
+                  To make it easier and quicker to apply to jobs, I'm working on being able fill out the application for you... under your supervision!
                 </p>
               </div>
             </div>
@@ -927,6 +952,5 @@ export default function Component() {
         </Tabs>
       )}
     </div>
-  )
-  
+  );
 }

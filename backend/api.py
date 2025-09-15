@@ -1,6 +1,7 @@
 """APIs for generating a resume review and changes tailored to a given job description."""
 
 from fastapi import FastAPI, Security
+from typing import Optional
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
@@ -243,20 +244,25 @@ def process_questions_and_answers(user_response: QuestionAnswers,
 
 
 @app.get("/resume")
-def manage_resume(command:str, demo: bool = False,
-                  creds=Security(security),
+def manage_resume(command: str, demo: bool = False,
+                  creds = Security(security),
                   ):
     """Return the user's saved resume."""
-    # return stubbed response for demo
+    # return stubbed response for demo (no auth required for demo)
     if demo:
         shutil.copyfile(RESUME_DEMO_FILE, RESUME_BASELINE_FILE)
         return {"resume": RESUME_BASELINE_FILE.read_text()}
+
+    # If not in demo and no credentials provided, avoid 401 spam and return a clear error
+    if not creds:
+        return {"error": "Authentication required to load resume."}
 
     # authenticate/authorize before proceeding
     claims = verify_token(creds)
     check_authorized_user(claims)
 
     if command == "load":
+        shutil.copyfile(RESUME_FILE, RESUME_BASELINE_FILE)
         response = {"resume": RESUME_FILE.read_text()}
     else:
         response = {"error": "Invalid command"}
