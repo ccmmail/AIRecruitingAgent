@@ -87,6 +87,9 @@ export default function Component() {
   // Track previous demoState for effect
   const previousDemoRef = useRef(demoState)
 
+  // Anchor to scroll Review panel to top
+  const reviewTopRef = useRef<HTMLDivElement | null>(null);
+
   // On initialization (and whenever we are in demo), load the demo resume once
   useEffect(() => {
     if (demoState && !resumeLoadedRef.current) {
@@ -477,6 +480,10 @@ useEffect(() => {
       if (result) {
         // Clear the user input in the text fields after successful response
         setQuestionAnswers({});
+        // Move focus to the top of the Review panel
+        setTimeout(() => {
+          reviewTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 0);
       }
     } catch (err: any) {
       if (!handleAuthError(err)) {
@@ -729,6 +736,7 @@ useEffect(() => {
 
                   <ScrollArea className="h-[calc(100vh-200px)]">
                     <div className="space-y-6 p-4">
+                      <div ref={reviewTopRef} />
 
                     {showReviewTooltip && (
                       <Tooltip title="Example resume review" onClose={() => setShowReviewTooltip(false)}>
