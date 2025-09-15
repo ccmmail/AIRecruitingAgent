@@ -4,26 +4,15 @@ from fastapi import APIRouter, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from google.oauth2 import id_token
 from google.auth.transport import requests as grequests
-from dotenv import load_dotenv, find_dotenv
 import os, base64
 from pathlib import Path
+from dotenv import load_dotenv
 
-
-# # try loading .env from the *current working dir* and walking upwards to project root
-# try:
-#     env_path = find_dotenv(filename=".env", usecwd=True)
-#     if env_path:
-#         load_dotenv(env_path, override=False)
-#         print(f"[startup] Loaded .env from: {env_path}")
-#     else:
-#         print("[startup] .env not found via find_dotenv()")
-# except Exception as e:
-#     print(f"[startup] dotenv load skipped/failed: {e}")
 
 # Load environment variables from .env file
-# REPO_ROOT = Path(__file__).resolve().parents[1]
-# ENV_FILE = REPO_ROOT / ".env"
-# load_dotenv(dotenv_path=ENV_FILE, override=False)
+REPO_ROOT = Path(__file__).resolve().parents[1]
+ENV_FILE = REPO_ROOT / ".env"
+load_dotenv(dotenv_path=ENV_FILE, override=False)
 
 
 def _clean_env(s: str | None) -> str:
@@ -52,11 +41,6 @@ security = HTTPBearer(auto_error=False)
 GOOGLE_WEB_CLIENT_ID = _clean_env(os.getenv("GOOGLE_WEB_CLIENT_ID"))
 ALLOWED_EMAILS = _parse_list("ALLOWED_EMAILS")
 ALLOWED_DOMAINS = _parse_list("ALLOWED_DOMAINS")
-
-# --- temporary diagnostics (remove later) ---
-print("[auth] GOOGLE_WEB_CLIENT_ID =", repr(GOOGLE_WEB_CLIENT_ID))
-print("[auth] ALLOWED_EMAILS      =", sorted(list(ALLOWED_EMAILS)))
-print("[auth] ALLOWED_DOMAINS     =", sorted(list(ALLOWED_DOMAINS)))
 
 
 router = APIRouter()
