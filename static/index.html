@@ -17,7 +17,7 @@
     --radius: 16px;
   }
   * { box-sizing: border-box; }
-  html, body { margin:0; padding:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--ink); }
+  html, body { margin:0; padding:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--ink); overflow-x: hidden; }
   a { color: var(--brand); text-decoration: none; }
   a:hover { text-decoration: underline; }
   .wrap { max-width: 1040px; margin: 0 auto; padding: 20px; }
@@ -25,18 +25,30 @@
     display: grid; gap: 12px; padding: 28px 0 10px;
   }
   .badge { display: inline-flex; align-items:center; gap:8px; font-size:12px; padding:6px 10px; border-radius:999px; background: #0f224a; color: var(--muted); border: 1px solid #1f305e;}
+  .coming-soon {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+    background: #ff9800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    vertical-align: middle;
+  }
   .hero {
     display: grid; gap: 14px;
   }
+  .hero, .wrap { min-width: 0; }
   .title { font-size: clamp(28px, 6vw, 52px); line-height:1.05; letter-spacing:-.02em; margin-bottom: 6px; }
-  .subtitle { font-size: clamp(14px, 2.8vw, 18px); color: var(--muted); max-width: none; }
+  .subtitle { font-size: clamp(14px, 2.8vw, 18px); color: var(--muted); max-width: none; overflow-wrap: anywhere; word-break: break-word; hyphens: auto; }
   .cta-row { display:flex; gap:12px; flex-wrap: wrap; margin-top: 6px; }
   .btn {
     appearance: none; border: 0; border-radius: 999px; padding: 12px 18px; font-weight: 600; cursor: pointer;
   }
   .btn-primary { background: linear-gradient(135deg, var(--brand), #5a7bff 60%); color: white; box-shadow: var(--shadow); }
   .btn-secondary { background: transparent; color: var(--ink); border: 1px solid #2d3a67; }
-  .trust { display:flex; align-items:center; gap: 12px; color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .trust { display:flex; align-items:center; gap: 12px; color: var(--muted); font-size: 13px; margin-top: 8px; flex-wrap: wrap; row-gap: 8px; }
   .grid { display: grid; gap: 16px; }
   .module { background: var(--card); border: 1px solid #1d2647; border-radius: var(--radius); overflow: clip; box-shadow: var(--shadow); }
   .module-inner { display: grid; gap: 10px; padding: 12px; }
@@ -45,7 +57,7 @@
   .h3 { font-size: clamp(18px, 3vw, 22px); margin: 2px 0; }
   .copy { color: #c7d6ff; font-size: 14px; line-height: 1.45; }
   .list { margin: 10px 0 0 18px; color: #c7d6ff; }
-  .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid #2d3a67; border-radius:999px; font-size:12px; color: #c7d6ff; }
+  .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid #2d3a67; border-radius:999px; font-size:12px; color: #c7d6ff; white-space: normal; max-width: 100%; line-height: 1.25; }
   footer { color: var(--muted); font-size: 12px; padding: 28px 0 36px; text-align:center;}
   .cols {
     display: grid;
@@ -168,6 +180,37 @@
           </ul>
         </div>
       </section>
+
+      <!-- Feature 6: Auto form completion -->
+      <section class="module feature">
+        <img class="shot" src="/static/6. Auto-completion of multipage application forms.png" alt="Agentic form completion" />
+        <div class="module-inner">
+          <span class="kicker">Step 6: Auto-Application</span>
+          <h3 class="h3">Agentic Form Completion <span class="coming-soon">COMING SOON</span></h3>
+          <p class="copy">Our AI agent automatically fills out job application forms using your optimized resume data. Critical information is highlighted for your review before submission.</p>
+          <ul class="list">
+            <li>Automatic form field detection and completion</li>
+            <li>Role-specific cover letters</li>
+            <li>Smart validation and review prompts</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Feature 7: Networking contacts identification -->
+      <section class="module feature">
+        <img class="shot" src="/static/7. Identification of most promising networking contacts.png" alt="Networking contacts identification" />
+        <div class="module-inner">
+          <span class="kicker">Step 7: Network Discovery</span>
+          <h3 class="h3">Networking Intelligence <span class="coming-soon">COMING SOON</span></h3>
+          <p class="copy">Discover valuable connections at your target company through LinkedIn network analysis and alumni databases. Get personalized outreach strategies and message templates to maximize your networking success.</p>
+          <ul class="list">
+            <li>1st and 2nd degree connection mapping</li>
+            <li>Alumni and association network discovery</li>
+            <li>Networking outreach guidance</li>
+          </ul>
+        </div>
+      </section>
+
     </main>
 
     <footer>
