@@ -1,4 +1,4 @@
-"""Utility program to create the JSON temp and demo files."""
+"""Utility program to create files for demo API response and input to the LLM."""
 import json
 from pathlib import Path
 from backend.api import create_resume_diff
@@ -6,74 +6,77 @@ from backend.api import create_resume_diff
 BASE_DIR = Path(__file__).resolve().parent.parent
 USER_DIR = BASE_DIR / "user"
 TEMP_DIR = BASE_DIR / "temp"
+DEMO_DIR = BASE_DIR / "demo"
 # User data
 RESUME_FILE = USER_DIR / "resume.txt"
 ADDITIONAL_EXPERIENCE_FILE = USER_DIR / "additional_candidate_info.txt"
 # Temp working files
-OUTPUT_FROM_LLM_PRIOR_FILE = TEMP_DIR / "LLM_response_prior.json"
-OUTPUT_FROM_LLM_CURRENT_FILE = TEMP_DIR / "LLM_response_current.json"
 RESUME_BASELINE_FILE = TEMP_DIR / "resume_baseline.txt"
 RESUME_REVISED_FILE = TEMP_DIR / "resume_revised.txt"
 USER_RESPONSE_FILE = TEMP_DIR / "user_response.json"
+OUTPUT_FROM_LLM_PRIOR_FILE = TEMP_DIR / "LLM_response_prior.json"
+OUTPUT_FROM_LLM_CURRENT_FILE = TEMP_DIR / "LLM_response_current.json"
 # Demo files
-JOB_DESCRIPTION_DEMO_FILE = TEMP_DIR / "job_description_demo.txt"
-RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = TEMP_DIR / "API_response_review_add_info_demo.json"
-RESPONSE_REVIEW_DEMO_FILE = TEMP_DIR / "API_response_review_demo.json"
+JOB_DESCRIPTION_DEMO_FILE = DEMO_DIR / "job_description_demo.txt"
+RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = DEMO_DIR / "API_response_review_add_info_demo.json"
+RESPONSE_REVIEW_DEMO_FILE = DEMO_DIR / "API_response_review_demo.json"
 
 
-def create_prompt_JSON_input():
+def create_prompt_json_input():
     """Create the JSON input for the LLM."""
-    input_json = {}
+    input_dict = {}
 
-    with open(JOB_DESCRIPTION_DEMO_FILE, "r") as file:
-        input_json["Job_Description"] = file.read()
+    input_dict["Job_Description"] = JOB_DESCRIPTION_DEMO_FILE.read_text()
+    input_dict["Resume"] = RESUME_BASELINE_FILE.read_text()
+    input_dict["Additional_Info"] = ADDITIONAL_EXPERIENCE_FILE.read_text()
+    if OUTPUT_FROM_LLM_CURRENT_FILE.exists():
+        input_dict["Fit"] = OUTPUT_FROM_LLM_CURRENT_FILE.read_text()
+        input_dict["Gap_Map"] = OUTPUT_FROM_LLM_CURRENT_FILE.read_text()
+    if USER_RESPONSE_FILE.exists():
+        input_dict["qa_pairs"] = USER_RESPONSE_FILE.read_text()
 
-    with open(RESUME_BASELINE_FILE, "r") as file:
-        input_json["Resume"] = file.read()
+    json_file = BASE_DIR / "LLM_JSON_input.json"
+    json_file.write_text(json.dumps(input_dict, indent=4))
 
-    with open(ADDITIONAL_EXPERIENCE_FILE, "r") as file:
-        input_json["Additional_Info"] = file.read()
 
-    # change to OUTPUT_FROM_LLM_CURRENT_FILE if creating input for additional info
-    with open(OUTPUT_FROM_LLM_PRIOR_FILE, "r") as file:
-        LLM_response = json.load(file)
-        input_json["Fit"] = LLM_response["Fit"]
-        input_json["Gap_Map"] = LLM_response["Gap_Map"]
-
-    with open(USER_RESPONSE_FILE, "r") as file:
-        user_response = json.load(file)
-        input_json["qa_pairs"] = user_response
-
-    with open(BASE_DIR / "LLM_JSON_input.json", "w") as file:
-        json.dump(input_json, file, indent=4)
-
-def create_API_response():
+def create_api_response(path_file: Path):
     """Create the API response JSON for demo."""
-    response = {}
+    if not OUTPUT_FROM_LLM_CURRENT_FILE.exists():
+        print(f"Error: OUTPUT_FROM_LLM_CURRENT_FILE does not exist.")
+        return
 
-    # change ot OUTPUT_FROM_LLM_CURRENT_FILE if creating response for additional info
-    with open(OUTPUT_FROM_LLM_CURRENT_FILE, "r") as file:
-        response_prior = json.loads(file.read())
+    api_response_dict = {}
 
-    response: dict = {
-        "Fit": response_prior["Fit"],
-        "Gap_Map": response_prior["Gap_Map"],
-        "Questions": response_prior["Questions"]
+    LLM_response = json.loads(OUTPUT_FROM_LLM_CURRENT_FILE.read_text())
+    api_response_dict = {
+        "Fit": LLM_response["Fit"],
+        "Gap_Map": LLM_response["Gap_Map"],
+        "Questions": LLM_response["Questions"]
     }
 
-    revised = response_prior["Tailored_Resume"]
-    with open(RESUME_BASELINE_FILE, "r") as file:
-        baseline = file.read()
-    response["Tailored_Resume"] = create_resume_diff(baseline, revised)
+    revised_resume = LLM_response["Tailored_Resume"]
+    baseline_resume = RESUME_BASELINE_FILE.read_text()
+    api_response_dict["Tailored_Resume"] = create_resume_diff(baseline_resume, revised_resume)
 
-    # Change to RESPONSE_REVIEW_ADD_INFO_DEMO_FILE if creating response for additional info
-    with open(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE, "w") as file:
-        file.write(json.dumps(response, indent=4))
-
-create_API_response()
+    path_file.write_text(json.dumps(api_response_dict, indent=4))
 
 
+if __name__ == "__main__":
+    print("Demo file maker")
+    print("1. Create JSON input for LLM ")
+    print("2. Create API response for first review")
+    print("3. Create API response for review with additional info")
+    print()
+    choice = input("What do you want to do? ")
 
-
+    match choice:
+        case "1":
+            create_prompt_json_input()
+        case "2":
+            create_api_response(RESPONSE_REVIEW_DEMO_FILE)
+        case "3":
+            create_api_response(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE)
+        case _:
+            print("Invalid choice")
 
 

@@ -1,0 +1,75 @@
+{
+  "Fit": {
+    "score": 8,
+    "rationale": "Strong product/operator leader with repeat startup and scale experience, P&L and GTM track record, hands-on ML/product delivery (founded data science/ML teams), and proven ability to recruit and run large cross-functional orgs. Has an active investor network (Silicon Valley Angels, Benchmark, Sequoia) and advisor role in early-stage investing to support seed raise. Key gaps: no explicit record of personally leading/closing a seed round and limited explicit Generative AI model/architecture details and documented HIPAA/regulatory product execution. Best positioned as a product-led, technical CEO/co-founder who will own vision, product-market fit with early customers, and lead seed fundraising leveraging investor network and advisor support."
+  },
+  "Gap_Map": [
+    {
+      "JD Requirement/Keyword": "Seed / early-stage fundraising (High)",
+      "Present in Resume?": "Partial",
+      "Where/Evidence": "Crystal Peak PE role (investor relations); QA: connections to Silicon Valley Angels, Benchmark, Sequoia; Operating Advisor at Keirutsu",
+      "Gap handling": "Ask - clarify any closed seed rounds or committed introductions"
+    },
+    {
+      "JD Requirement/Keyword": "Founder / early-stage executive experience (High)",
+      "Present in Resume?": "Partial",
+      "Where/Evidence": "ADNOVA (startup CPO), HomeQuest GM/CMO pivot and acquisition, broad P&L ownership",
+      "Gap handling": "Rephrase - emphasize full product-cycle ownership and startup GTM outcomes"
+    },
+    {
+      "JD Requirement/Keyword": "Generative AI / ML product experience (High)",
+      "Present in Resume?": "Partial",
+      "Where/Evidence": "HomeQuest ML features, Financia founded data science group, QA: founded 5-person ML team",
+      "Gap handling": "Ask - request model types, frameworks, team size and measurable outcomes"
+    },
+    {
+      "JD Requirement/Keyword": "Recruiting/building engineering & research teams (High)",
+      "Present in Resume?": "Y",
+      "Where/Evidence": "HomeQuest led ~140-person org; Crystal Peak recruited 10+ senior execs; Financia founded data science group",
+      "Gap handling": "Rephrase - call out ML/research hires and remote hiring experience"
+    },
+    {
+      "JD Requirement/Keyword": "Product development & iteration with early customers (High)",
+      "Present in Resume?": "Y",
+      "Where/Evidence": "HomeQuest pivot and ML rollout; ADNOVA product launches; Financia B2B2C transformation",
+      "Gap handling": "Rephrase - highlight customer feedback loops, onboarding, and retention impacts"
+    },
+    {
+      "JD Requirement/Keyword": "Go-to-market, customer acquisition & partnerships (Med)",
+      "Present in Resume?": "Y",
+      "Where/Evidence": "HomeQuest monetization, Financia omnichannel GTM, Local Digital CRM/mobile GTM",
+      "Gap handling": "Rephrase - mirror JD GTM/ICP/LTV language for ATS"
+    },
+    {
+      "JD Requirement/Keyword": "Experience in regulated industries / healthcare (Med)",
+      "Present in Resume?": "Partial",
+      "Where/Evidence": "QA: Board Advisor at NewHealthCare, helped reposition to SaaS while addressing regulatory concerns",
+      "Gap handling": "Ask - clarify extent of HIPAA/regulatory product execution or approvals"
+    },
+    {
+      "JD Requirement/Keyword": "Network of investors / advisors (Med)",
+      "Present in Resume?": "Y",
+      "Where/Evidence": "QA: direct connections to Silicon Valley Angels and Series A investors (Benchmark, Sequoia); Operating Advisor at Keirutsu",
+      "Gap handling": "Rephrase - call out networks and advisor role to support fundraising"
+    },
+    {
+      "JD Requirement/Keyword": "Compliance & ethics in sensitive domains (Low)",
+      "Present in Resume?": "N",
+      "Where/Evidence": "No explicit HIPAA/compliance bullets",
+      "Gap handling": "Ask - only include if candidate has specific compliance delivery experience"
+    },
+    {
+      "JD Requirement/Keyword": "Located in / willing to travel to SF Bay Area (Low)",
+      "Present in Resume?": "N",
+      "Where/Evidence": "Header: Riverside, NY; no relocation/travel note",
+      "Gap handling": "Ask - confirm Bay Area relocation or travel willingness"
+    }
+  ],
+  "Questions": [
+    "For the ML work at HomeQuest and Financia: what model types/approaches and frameworks were used (e.g., recommenders, NLP, TensorFlow, PyTorch), team size you founded/led, and a measurable outcome (CTR, retention, revenue lift)?",
+    "Have you personally led and closed a seed or pre-seed round? If yes, list round size, your role, and investors; if no, can you commit to making introductions to the angel/VC contacts you cited?",
+    "Regarding NewHealthCare advisory: duration and concrete regulatory/compliance work (HIPAA, approvals, pricing/regulatory lobbying) and any product changes or approvals you drove?",
+    "What else should I know about you and this job?"
+  ],
+  "Tailored_Resume": "Jane Doe\nRiverside, NY    |    (555) 123-4567    |    jane.doe@email.com    |    linkedin.com/in/jane-doe\n\n## PROFESSIONAL EXPERIENCE \nCRYSTAL PEAK CAPITAL        Apr 2020 - Oct 2024, Brookfield, NY\nPrivate equity firm investing in technology and technology-enabled companies. Responsible for improving operating effectiveness and efficiencies of portfolio companies. \n\nOperating Executive \nStrategy, Transformation, Organization Development, Executive Recruiting & Coaching\n* Recruited and coached 10+ senior executives (CEO, CPO, CTO, COO) to strengthen leadership teams across portfolio companies\n* Partnered with product and engineering leaders to reset operating practices and org structure, driving ~25% productivity gains and ~12% revenue growth\n* Identified ~15% operating margin improvements via workforce redesign and AI efficiencies; ~60% of savings realized after 12 months\n* Prepared investor-facing materials and engaged angel/VC networks to support portfolio exits and growth (connections include Silicon Valley Angels, Benchmark, Sequoia)\n\n\nHOMEQUEST RENTALS        Apr 2017 - Mar 2020, Riverton, NY\nDigital apartment rental search for consumers and lead generation for landlords. Direct report to CEO. Led ~140-person team responsible for product, UX, editorial, sales, and operations. \n\nChief Product Officer and General Manager\n* Defined renter-centric product vision and executed a strategic pivot that enabled a major acquisition and new monetization pathways\n* Launched first-in-industry machine learning features (led cross-functional team) to grow reach to ~70M monthly unique users (+~12% CAGR) and lift user satisfaction (~75/100)\n* Drove new monetization products and optimized lead flow, supporting ~12% CAGR revenue growth and improved LTV of advertiser relationships\n* Owned P&L, sales, and operations for two legacy businesses, consistently exceeding EBITDA targets and lowering operational costs\n* Rebuilt product and engineering processes, improving employee engagement ~20% and reducing voluntary turnover to a 5-year low\n\n\nFINANCIA        Apr 2014 - Mar 2017, Newton, NY\nAutomated asset management. Direct report to CEO. \n\nEVP, Product Management and Consumer Marketing \n* Oversaw asset management business, growing ~18% CAGR to ~$300M AUM by 2016\n* Led B2B→B2B2C transformation that doubled product usage and cut cancellations ~15%\n* Shifted to freemium and omnichannel marketing, raising conversion ~25% and accelerating customer acquisition\n* Tripled execution speed via agile adoption and founded a data science group to enable analytics-driven product decisions\n\n\nADNOVA NETWORKS        Apr 2012 - Mar 2014, Pinecrest, NY\nBig data adtech startup. \n\nChief Product Officer \n* Conceived and launched new product lines that repositioned the company and expanded addressable market\n* Improved publisher products, cutting churn ~60% and growing publisher base ~50% (to ~900K+ sites)\n* Created new ad inventory performing 3X–8X better than competitors, comprising ~45% of revenue after 18 months\n\n\nLOCAL DIGITAL        Jan 2009 - Mar 2012, Bayport, NY\nAd products for local businesses. \n\nVice President, Product - Advertising Products and Publisher Network\n* Managed advertising product suite that grew ~15% CAGR to ~$700M in 2011, with 3 of 4 product lines exceeding targets\n* Launched small-business CRM and mobile ad network, driving ~40% lift in qualified leads and 2X eCPMs in mobile\n* Introduced mobile-first GTM and pre-sales tools that raised sales productivity ~40%\n* Partnered with cross-functional teams to scale go-to-market, partnerships, and channel integrations\n\n\nEarlier career roles:\nCHATTERBOX, VP Product        May 2007 - Dec 2009, Brookfield, NY\nMARKETPLACE ONLINE, Group Product Manager        May 2004 - Apr 2007, Fremont, NY\nTASKFLOW SYSTEMS, Director Marketing and Category Management        Aug 2004 - May 2007, Newton, NY\nSTRATEGY ADVISORS, Associate        Feb 1996 - Jun 1998, Riverbend, NY\n\n\n## EDUCATION\nGEORGIA TECH        Aug 2024 - current, Online\nMaster of Computer Science (AI / ML)\n\nNORTHEASTERN SCHOOL OF MANAGEMENT        Aug 1998 - Jun 2000, Boston, MA\nMaster of Business Administration\n\nPACIFIC UNIVERSITY        Feb 1992 - Dec 1995 Australia\nBachelor of Science (Statistics)\n"
+}

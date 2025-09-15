@@ -38,6 +38,7 @@ OUTPUT_FROM_LLM_PRIOR_FILE = TEMP_DIR / "LLM_response_prior.json"
 OUTPUT_FROM_LLM_CURRENT_FILE = TEMP_DIR / "LLM_response_current.json"
 JOB_DESCRIPTION_FILE = TEMP_DIR / "job_description.txt"
 # Demo files
+RESUME_DEMO_FILE = DEMO_DIR / "resume_demo.txt"
 JOB_DESCRIPTION_DEMO_FILE = DEMO_DIR / "job_description_demo.txt"
 RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = DEMO_DIR / "API_response_review_add_info_demo.json"
 RESPONSE_REVIEW_DEMO_FILE = DEMO_DIR / "API_response_review_demo.json"
@@ -56,7 +57,7 @@ async def lifespan(app: FastAPI):
     # make temp directory
     TEMP_DIR.mkdir(parents=True, exist_ok=True)
     # copy the user's saved resume.txt into temp directory as the baseline
-    shutil.copyfile(RESUME_FILE, RESUME_BASELINE_FILE)
+    shutil.copyfile(RESUME_DEMO_FILE, RESUME_BASELINE_FILE)
     # Make the demo job description the working job description
     shutil.copyfile(JOB_DESCRIPTION_DEMO_FILE, JOB_DESCRIPTION_FILE)
     # delete temp working files if they exist
@@ -84,6 +85,29 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 app.include_router(oauth_router)  # Mount the /oauth2cb router
+
+
+def create_review_prompt(job_description: str) -> str:
+    """Construct JSON input and inject into prompt template."""
+    input_dict = {
+        "Job_Description": job_description,
+        "Resume": RESUME_BASELINE_FILE.read_text(),
+    }
+    if ADDITIONAL_EXPERIENCE_FILE.exists():
+        input_dict["Additional_Info"] = ADDITIONAL_EXPERIENCE_FILE.read_text()
+    if OUTPUT_FROM_LLM_CURRENT_FILE.exists():
+        llm_response = json.loads(OUTPUT_FROM_LLM_CURRENT_FILE.read_text())
+        input_dict["Fit"] = llm_response.get("Fit")
+        input_dict["Gap_Map"] = llm_response.get("Gap_Map")
+    if USER_RESPONSE_FILE.exists():
+        input_dict["qa_pairs"] = json.loads(USER_RESPONSE_FILE.read_text())
+
+    # replace placeholder {{input}} in the prompt template
+    input_json = json.dumps(input_dict, indent=4)
+    prompt = PROMPT_RESUME_REVIEW_FILE.read_text()
+    prompt = prompt.replace("{{INPUT}}", input_json)
+
+    return prompt
 
 
 @traceable(name="prompt_LLM")
@@ -129,28 +153,6 @@ def get_job_description_from_url(url:Url):
     return {"job_description": job_description}
 
 
-def create_review_prompt(job_description: str) -> str:
-    """Construct JSON input and inject into prompt template."""
-    input_dict = {
-        "Job_Description": job_description,
-        "Resume": RESUME_BASELINE_FILE.read_text(),
-        "Additional_Info": ADDITIONAL_EXPERIENCE_FILE.read_text()
-    }
-    if OUTPUT_FROM_LLM_CURRENT_FILE.exists():
-        llm_response = json.loads(OUTPUT_FROM_LLM_CURRENT_FILE.read_text())
-        input_dict["Fit"] = llm_response.get("Fit")
-        input_dict["Gap_Map"] = llm_response.get("Gap_Map")
-    if USER_RESPONSE_FILE.exists():
-        input_dict["qa_pairs"] = json.loads(USER_RESPONSE_FILE.read_text())
-
-    # replace placeholder {{input}} in the prompt template
-    input_json = json.dumps(input_dict, indent=4)
-    prompt = PROMPT_RESUME_REVIEW_FILE.read_text()
-    prompt = prompt.replace("{{INPUT}}", input_json)
-
-    return prompt
-
-
 class JobListing(BaseModel):
     """Define the shape of data expected by /review."""
     job_description: str  # Job description to be reviewed
@@ -173,14 +175,13 @@ def generate_review(job_listing: JobListing,
     6. Save the diff of baseline and revised resumes in the API response
     7. Return the response
     """
-    # Only perform authentication/authorization for non-demo calls
-    if not job_listing.demo:
-        claims = verify_token(creds)
-        check_authorized_user(claims)
-
     if job_listing.demo:  # returned stubbed API response
         response = json.loads(RESPONSE_REVIEW_DEMO_FILE.read_text())
         return response
+
+    # authenticate/authorize
+    claims = verify_token(creds)
+    check_authorized_user(claims)
 
     # get the LLM response
     prompt = create_review_prompt(job_listing.job_description)
@@ -218,14 +219,14 @@ def process_questions_and_answers(user_response: QuestionAnswers,
     2. Save user response to USER_RESPONSE_FILE
     4. Call generate_review() to get the updated review and resume
     """
-    # Only perform authentication/authorization for non-demo calls
-    if not user_response.demo:
-        claims = verify_token(creds)
-        check_authorized_user(claims)
-
-    if user_response.demo:  # returned stubbed API response
+    # return stubbed response for demo
+    if user_response.demo:
         response = json.loads(RESPONSE_REVIEW_ADD_INFO_DEMO_FILE.read_text())
         return response
+
+    # authenticate/authorize before proceeding
+    claims = verify_token(creds)
+    check_authorized_user(claims)
 
     # save user response to file
     user_response_dict = user_response.qa_pairs
@@ -234,9 +235,9 @@ def process_questions_and_answers(user_response: QuestionAnswers,
     # call generate_review() to get the updated review and resume
     job_listing = JobListing(
         job_description=JOB_DESCRIPTION_FILE.read_text(),
-        url="Follow-up prompt from user"
+        url="Follow-up prompt from user",
     )
-    response = generate_review(job_listing)
+    response = generate_review(job_listing=job_listing, creds=creds)
 
     return response
 
@@ -246,10 +247,14 @@ def manage_resume(command:str, demo: bool = False,
                   creds=Security(security),
                   ):
     """Return the user's saved resume."""
-    # Only perform authentication/authorization for non-demo calls
-    if not demo:
-        claims = verify_token(creds)
-        check_authorized_user(claims)
+    # return stubbed response for demo
+    if demo:
+        shutil.copyfile(RESUME_DEMO_FILE, RESUME_BASELINE_FILE)
+        return {"resume": RESUME_BASELINE_FILE.read_text()}
+
+    # authenticate/authorize before proceeding
+    claims = verify_token(creds)
+    check_authorized_user(claims)
 
     if command == "load":
         response = {"resume": RESUME_FILE.read_text()}
