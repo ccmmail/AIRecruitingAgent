@@ -61,22 +61,58 @@ export interface JobDescriptionResponse {
   error?: string;
 }
 
+// --- Backend URL override (dev helper) --------------------------------------
+export type BackendMode = "auto" | "local";
+const BACKEND_MODE_KEY = "ai_recruiting_agent_backend_mode"; // 'auto' | 'local'
+const BACKEND_LOCAL_URL = "http://127.0.0.1:8000";
+
+export function getBackendMode(): BackendMode {
+  try {
+    if (typeof window !== "undefined") {
+      const winMode = (window as any).__BACKEND_MODE as BackendMode | undefined;
+      if (winMode === "local" || winMode === "auto") return winMode;
+      const ls = typeof localStorage !== "undefined" ? localStorage.getItem(BACKEND_MODE_KEY) : null;
+      if (ls === "local" || ls === "auto") return ls as BackendMode;
+    }
+  } catch {}
+  return "auto";
+}
+
+export async function setBackendMode(mode: BackendMode): Promise<void> {
+  try {
+    if (typeof window !== "undefined") {
+      (window as any).__BACKEND_MODE = mode;
+      try { localStorage.setItem(BACKEND_MODE_KEY, mode); } catch {}
+      try {
+        if ((window as any).chrome?.storage?.local) {
+          await new Promise<void>(resolve => {
+            (window as any).chrome.storage.local.set({ [BACKEND_MODE_KEY]: mode }, () => resolve());
+          });
+        }
+      } catch {}
+    }
+  } catch {}
+}
+
 function getBackendUrl(): string {
-  // Prefer value injected at build-time by build-extension.js (window.__BACKEND_URL__)
+  // 1) Dev override first
+  const mode = getBackendMode();
+  if (mode === "local") return BACKEND_LOCAL_URL;
+
+  // 2) Build-time injected value
   try {
     if (typeof window !== "undefined" && (window as any).__BACKEND_URL__) {
       return (window as any).__BACKEND_URL__ as string;
     }
   } catch {}
 
-  // Fallback to a compile-time env var if available (safe-guarded for browser)
+  // 3) Env (at build time)
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pe = (typeof process !== "undefined" ? (process as any).env : undefined);
     if (pe?.BACKEND_URL) return pe.BACKEND_URL as string;
   } catch {}
 
-  // Final fallback (prod)
+  // 4) Default (prod)
   return "https://airecruitingagent.pythonanywhere.com";
 }
 

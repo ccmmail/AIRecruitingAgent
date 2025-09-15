@@ -21,7 +21,9 @@ import {
   login,
   logout,
   getAuthToken,
-  checkUserAuthentication
+  checkUserAuthentication,
+  getBackendMode,
+  setBackendMode
 } from "@/lib/api"
 import { ResumeRenderer } from "@/components/resume-renderer"
 import { Tooltip } from "@/components/tooltip"
@@ -72,6 +74,39 @@ export default function Component() {
   const [showReviewTooltip, setShowReviewTooltip] = useState(true)
   const [showResumeTooltip, setShowResumeTooltip] = useState(true)
   const [demoState, setDemoState] = useState(true)
+  const [backendMode, setBackendModeState] = useState<"auto" | "local">("auto");
+  useEffect(() => {
+    try {
+      const mode = getBackendMode();
+      setBackendModeState(mode);
+    } catch {}
+  }, []);
+
+  const toggleBackendMode = async () => {
+    const next = backendMode === "local" ? "auto" : "local";
+    await setBackendMode(next);
+    setBackendModeState(next);
+  };
+
+  const toggleDemo = () => {
+    setError(null);
+    // Flip the demo state and reset resume-related caches so the loader effect re-runs
+    setDemoState((prev) => {
+      const next = !prev;
+
+      // Clear any loaded resume/tailored content so the next view reflects the new mode
+      setTailoredMarkdown("");
+      setInitialResume("");
+      resumeLoadedRef.current = false;
+
+      // When turning demo ON, allow viewing (no auth needed)
+      if (next === true) {
+        setIsAuthorized(true);
+      }
+
+      return next;
+    });
+  };
   const [initialResume, setInitialResume] = useState("")
   const [isLoadingResume, setIsLoadingResume] = useState(false)
   // Authentication states
@@ -573,13 +608,26 @@ useEffect(() => {
           </div>
         </div>
         <div className="flex flex-col items-end">
-          <div
-  className={`text-xs px-2 py-1 rounded ${
-    demoState ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-  }`}
->
-  Demo {demoState ? "ON" : "OFF"}
-</div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleBackendMode}
+              className={`text-xs px-2 py-1 rounded border ${backendMode === "local" ? "bg-yellow-100 text-yellow-800 border-yellow-300" : "bg-gray-100 text-gray-800 border-gray-300"}`}
+              title="Toggle API backend between Local (127.0.0.1:8000) and Cloud"
+            >
+              API: {backendMode === "local" ? "Local" : "Cloud"}
+            </button>
+            <button
+              onClick={toggleDemo}
+              className={`text-xs px-2 py-1 rounded border ${
+                demoState
+                  ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
+                  : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+              }`}
+              title="Toggle demo mode on/off"
+            >
+              Demo {demoState ? "ON" : "OFF"}
+            </button>
+          </div>
           {isAuthenticated ? (
             <div className="flex items-center gap-1 mt-1 text-xs">
               <span className="text-green-800 flex items-center gap-1">
