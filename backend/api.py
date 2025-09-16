@@ -16,7 +16,7 @@ from .redline import redline_diff
 from .security import check_authorized_user, verify_token, security
 from .security import router as oauth_router
 import httpx
-
+import datetime
 
 # Load environment variables from .env file
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -50,6 +50,7 @@ RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = DEMO_DIR / "API_response_review_add_info_de
 RESPONSE_REVIEW_DEMO_FILE = DEMO_DIR / "API_response_review_demo.json"
 
 # Initialize OpenAI client and LangSmith tracer
+print(datetime.datetime.now())
 print("Loaded OPENAI_API_KEY?", bool(os.getenv("OPENAI_API_KEY")))  # diagnostic print
 print("openai version:", getattr(OpenAI, "__module__", "openai"))
 print("httpx version:", httpx.__version__)
