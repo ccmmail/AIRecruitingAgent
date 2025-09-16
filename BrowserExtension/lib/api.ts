@@ -217,109 +217,111 @@ function rand(n = 24): string {
 
 
 export async function login(): Promise<AuthToken | null> {
-  try {
-    if (isChromeExtension() && (window as any).chrome?.identity) {
-        const redirectUri = AUTH_REDIRECT_URI;
+    try {
+        if (isChromeExtension() && (window as any).chrome?.identity) {
+            const redirectUri = AUTH_REDIRECT_URI;
 
-      // Hard-code client id to avoid manifest/env fallbacks during debug
-      const CLIENT_ID = CHROME_EXTENSION_CLIENT_ID;
-      // Required when requesting id_token
-      const state = rand();
-      const nonce = rand();
+            // Hard-code client id to avoid manifest/env fallbacks during debug
+            const CLIENT_ID = CHROME_EXTENSION_CLIENT_ID;
+            // Required when requesting id_token
+            const state = rand();
+            const nonce = rand();
 
-      // Sanity checks & debug
-      console.log("[OAuth] runtime.id:", (window as any).chrome.runtime.id);
-      console.log("[OAuth] using redirectUri:", redirectUri);
-      console.log("[OAuth] client_id:", CLIENT_ID);
+            // Sanity checks & debug
+            console.log("[OAuth] runtime.id:", (window as any).chrome.runtime.id);
+            console.log("[OAuth] using redirectUri:", redirectUri);
+            console.log("[OAuth] client_id:", CLIENT_ID);
 
-      // Build the auth URL ONCE
-      const params = new URLSearchParams({
-        client_id: CLIENT_ID,
-        redirect_uri: redirectUri,
-        response_type: "token id_token",
-        scope: "openid email profile",
-        prompt: "consent",
-        state,
-        nonce,
-      });
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-      console.log("[OAuth] authUrl:", authUrl);
+            // Build the auth URL ONCE
+            const params = new URLSearchParams({
+                client_id: CLIENT_ID,
+                redirect_uri: redirectUri,
+                response_type: "token id_token",
+                scope: "openid email profile",
+                prompt: "consent",
+                state,
+                nonce,
+            });
+            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+            console.log("[OAuth] authUrl:", authUrl);
 
-      // Launch flow
-      const responseUrl = await new Promise<string>((resolve, reject) => {
-        (window as any).chrome.identity.launchWebAuthFlow(
-          { url: authUrl, interactive: true },
-          (redirectedTo?: string) => {
-            console.log("[OAuth] redirectedTo:", redirectedTo);
-            if ((window as any).chrome.runtime.lastError) {
-              return reject(new Error((window as any).chrome.runtime.lastError.message));
+            // Launch flow
+            const responseUrl = await new Promise<string>((resolve, reject) => {
+                (window as any).chrome.identity.launchWebAuthFlow(
+                    {url: authUrl, interactive: true},
+                    (redirectedTo?: string) => {
+                        console.log("[OAuth] redirectedTo:", redirectedTo);
+                        if ((window as any).chrome.runtime.lastError) {
+                            return reject(new Error((window as any).chrome.runtime.lastError.message));
+                        }
+                        if (!redirectedTo) return reject(new Error("No response URL returned from auth flow"));
+                        resolve(redirectedTo);
+                    }
+                );
+            });
+
+            // Parse fragment (#...)
+            const hash = (new URL(responseUrl)).hash.replace(/^#/, "");
+            const q = new URLSearchParams(hash);
+
+            // Handle errors first
+            const err = q.get("error");
+            if (err) {
+                const desc = q.get("error_description") || "";
+                console.error("[OAuth] error:", err, desc);
+                return null;
             }
-            if (!redirectedTo) return reject(new Error("No response URL returned from auth flow"));
-            resolve(redirectedTo);
-          }
-        );
-      });
 
-      // Parse fragment (#...)
-      const hash = (new URL(responseUrl)).hash.replace(/^#/, "");
-      const q = new URLSearchParams(hash);
+            // Validate state
+            if (q.get("state") !== state) {
+                console.error("[OAuth] state mismatch");
+                return null;
+            }
 
-      // Handle errors first
-      const err = q.get("error");
-      if (err) {
-        const desc = q.get("error_description") || "";
-        console.error("[OAuth] error:", err, desc);
-        return null;
-      }
+            const accessToken = q.get("access_token");
+            const idToken = q.get("id_token");
+            const expiresIn = q.get("expires_in");
 
-      // Validate state
-      if (q.get("state") !== state) {
-        console.error("[OAuth] state mismatch");
-        return null;
-      }
+            if (!accessToken || !idToken || !expiresIn) {
+                console.error("Invalid authentication response:", {accessToken, idToken, expiresIn});
+                return null;
+            }
 
-      const accessToken = q.get("access_token");
-      const idToken = q.get("id_token");
-      const expiresIn = q.get("expires_in");
-
-      if (!accessToken || !idToken || !expiresIn) {
-        console.error("Invalid authentication response:", { accessToken, idToken, expiresIn });
-        return null;
-      }
-
-      const expiresAt = Date.now() + parseInt(expiresIn, 10) * 1000;
-      const token = { accessToken, idToken, expiresAt };
-      await tokenStore.set(token);
-      return token;
+            const expiresAt = Date.now() + parseInt(expiresIn, 10) * 1000;
+            const token = {accessToken, idToken, expiresAt};
+            await tokenStore.set(token);
+            return token;
+        }
+    } catch (e) {
+        console.error("Login error:", e);
     }
-  } catch (e) {
-    console.error("Login error:", e);
-  }
 
 // Optional non-extension fallback (web)
-if (typeof window !== "undefined") {
-  const fallbackRedirect = `${window.location.origin}/auth-callback.html`;
+    if (typeof window !== "undefined") {
+        const fallbackRedirect = `${window.location.origin}/auth-callback.html`;
 
-  // Generate and persist state + nonce for verification on return
-  const state = rand();
-  const nonce = rand();
-  try {
-    sessionStorage.setItem(OAUTH_STATE_KEY, state);
-    sessionStorage.setItem(OAUTH_NONCE_KEY, nonce);
-  } catch {}
+        // Generate and persist state + nonce for verification on return
+        const state = rand();
+        const nonce = rand();
+        try {
+            sessionStorage.setItem(OAUTH_STATE_KEY, state);
+            sessionStorage.setItem(OAUTH_NONCE_KEY, nonce);
+        } catch {
+        }
 
-  const params = new URLSearchParams({
-    client_id: AUTH_CONFIG.clientId,
-    redirect_uri: fallbackRedirect,
-    response_type: "token id_token",
-    scope: "openid email profile",          // <-- include 'openid'
-    prompt: "consent",
-    state,                                   // <-- add state
-    nonce,                                   // <-- add nonce (required for id_token)
-  });
+        const params = new URLSearchParams({
+            client_id: AUTH_CONFIG.clientId,
+            redirect_uri: fallbackRedirect,
+            response_type: "token id_token",
+            scope: "openid email profile",          // <-- include 'openid'
+            prompt: "consent",
+            state,                                   // <-- add state
+            nonce,                                   // <-- add nonce (required for id_token)
+        });
 
-  window.location.href = `${AUTH_CONFIG.authUrl}?${params.toString()}`;
-  return null;
+        window.location.href = `${AUTH_CONFIG.authUrl}?${params.toString()}`;
+        return null;
+    }
 }
 
 // Logout
