@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from .redline import redline_diff
 from .security import check_authorized_user, verify_token, security
 from .security import router as oauth_router
+import httpx
 
 
 # Load environment variables from .env file
@@ -49,12 +50,16 @@ RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = DEMO_DIR / "API_response_review_add_info_de
 RESPONSE_REVIEW_DEMO_FILE = DEMO_DIR / "API_response_review_demo.json"
 
 # Initialize OpenAI client and LangSmith tracer
-LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-import httpx, sys
 print("Loaded OPENAI_API_KEY?", bool(os.getenv("OPENAI_API_KEY")))  # diagnostic print
-print("Python version:", sys.version)
 print("openai version:", getattr(OpenAI, "__module__", "openai"))
 print("httpx version:", httpx.__version__)
+proxy_url = os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
+if proxy_url:
+    transport = httpx.HTTPTransport(proxy=proxy_url, retries=3)
+    http_client = httpx.Client(transport=transport, timeout=60.0)
+else:
+    http_client = httpx.Client(timeout=60.0)
+LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
 langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
