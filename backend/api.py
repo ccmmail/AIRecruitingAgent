@@ -50,6 +50,7 @@ RESPONSE_REVIEW_DEMO_FILE = DEMO_DIR / "API_response_review_demo.json"
 
 # Initialize OpenAI client and LangSmith tracer
 LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+print("Loaded OPENAI_API_KEY?", bool(os.getenv("OPENAI_API_KEY")))  # diagnostic print
 os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
 langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
