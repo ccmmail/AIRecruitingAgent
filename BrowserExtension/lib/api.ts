@@ -18,6 +18,8 @@ function isChromeExtension(): boolean {
 const CHROME_EXTENSION_CLIENT_ID =
   '258289407737-mdh4gleu91oug8f5g8jqkt75f62te9kv.apps.googleusercontent.com'; // for airecruitingagent.pythonanywhere.com
 const AUTH_REDIRECT_URI = 'https://airecruitingagent.pythonanywhere.com/oauth2cb';
+const OAUTH_STATE_KEY = "ai_recruiting_agent_oauth_state";
+const OAUTH_NONCE_KEY = "ai_recruiting_agent_oauth_nonce";
 
 export const AUTH_CONFIG = {
   clientId: CHROME_EXTENSION_CLIENT_ID,              // <- explicit, no manifest dependency
@@ -294,19 +296,29 @@ export async function login(): Promise<AuthToken | null> {
     console.error("Login error:", e);
   }
 
-  // Optional non-extension fallback (can be removed if unused)
-  if (typeof window !== "undefined") {
-    // This branch should rarely run in an extension context
-    const fallbackRedirect = `${window.location.origin}/auth-callback.html`;
-    const params = new URLSearchParams({
-      client_id: AUTH_CONFIG.clientId,
-      redirect_uri: fallbackRedirect,
-      response_type: "token id_token",
-      scope: AUTH_CONFIG.scope,
-      prompt: "consent",
-    });
-    window.location.href = `${AUTH_CONFIG.authUrl}?${params.toString()}`;
-  }
+// Optional non-extension fallback (web)
+if (typeof window !== "undefined") {
+  const fallbackRedirect = `${window.location.origin}/auth-callback.html`;
+
+  // Generate and persist state + nonce for verification on return
+  const state = rand();
+  const nonce = rand();
+  try {
+    sessionStorage.setItem(OAUTH_STATE_KEY, state);
+    sessionStorage.setItem(OAUTH_NONCE_KEY, nonce);
+  } catch {}
+
+  const params = new URLSearchParams({
+    client_id: AUTH_CONFIG.clientId,
+    redirect_uri: fallbackRedirect,
+    response_type: "token id_token",
+    scope: "openid email profile",          // <-- include 'openid'
+    prompt: "consent",
+    state,                                   // <-- add state
+    nonce,                                   // <-- add nonce (required for id_token)
+  });
+
+  window.location.href = `${AUTH_CONFIG.authUrl}?${params.toString()}`;
   return null;
 }
 
