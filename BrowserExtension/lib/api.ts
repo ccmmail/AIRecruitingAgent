@@ -297,7 +297,7 @@ export async function login(): Promise<AuthToken | null> {
   // Optional non-extension fallback (can be removed if unused)
   if (typeof window !== "undefined") {
     // This branch should rarely run in an extension context
-    const fallbackRedirect = "/auth-callback.html";
+    const fallbackRedirect = `${window.location.origin}/auth-callback.html`;
     const params = new URLSearchParams({
       client_id: AUTH_CONFIG.clientId,
       redirect_uri: fallbackRedirect,
