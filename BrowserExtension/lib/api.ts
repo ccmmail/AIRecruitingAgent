@@ -322,6 +322,8 @@ export async function login(): Promise<AuthToken | null> {
         window.location.href = `${AUTH_CONFIG.authUrl}?${params.toString()}`;
         return null;
     }
+    // Explicit final return for SSR/build or non-browser contexts
+    return null;
 }
 
 // Logout
