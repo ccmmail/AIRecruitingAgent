@@ -81,13 +81,18 @@ async def lifespan(app: FastAPI):
 app = FastAPI(debug=True, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ # In production, restrict to specific origins
+    allow_origins=[
+        # Chrome extension
         "chrome-extension://oblgighcolckndbinadplmmmebjemido",
-        # "localhost"
+        # Vercel deployed frontend
+        "https://ai-recruiting-agent.vercel.app",
+        # Local Next.js dev server (two variants to be safe)
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["*"],
 )
 app.include_router(oauth_router)  # Mount the /oauth2cb router
 

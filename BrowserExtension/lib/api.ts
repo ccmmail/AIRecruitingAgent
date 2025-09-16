@@ -109,6 +109,7 @@ function getBackendUrl(): string {
   // 3) Env (at build time)
   try {
     const pe = (typeof process !== "undefined" ? (process as any).env : undefined);
+    if (pe?.NEXT_PUBLIC_BACKEND_URL) return pe.NEXT_PUBLIC_BACKEND_URL as string; // for vercel
     if (pe?.BACKEND_URL) return pe.BACKEND_URL as string;
   } catch {}
 
