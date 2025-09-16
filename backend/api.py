@@ -1,22 +1,21 @@
 """APIs for generating a resume review and changes tailored to a given job description."""
 
 from fastapi import FastAPI, Security, HTTPException, status
-from starlette.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from openai import OpenAI
 from langsmith import traceable, Client
 from pathlib import Path
-import os, shutil
+import os, shutil, datetime
+import httpx
 import json
 from dotenv import load_dotenv
 from .redline import redline_diff
 from .security import check_authorized_user, verify_token, security
 from .security import router as oauth_router
-import httpx
-import datetime
 
 # Load environment variables from .env file
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -49,24 +48,23 @@ JOB_DESCRIPTION_DEMO_FILE = DEMO_DIR / "job_description_demo.txt"
 RESPONSE_REVIEW_ADD_INFO_DEMO_FILE = DEMO_DIR / "API_response_review_add_info_demo.json"
 RESPONSE_REVIEW_DEMO_FILE = DEMO_DIR / "API_response_review_demo.json"
 
-# Initialize OpenAI client and LangSmith tracer
-print(datetime.datetime.now())
-print("Loaded OPENAI_API_KEY?", bool(os.getenv("OPENAI_API_KEY")))  # diagnostic print
-print("openai version:", getattr(OpenAI, "__module__", "openai"))
-print("httpx version:", httpx.__version__)
+# setup httpx client with proxy if needed (needed for PythonAnywhere)
+print(f"{datetime.datetime.now()} starting up API server...")
 proxy_url = os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
-print("proxy url:", proxy_url)
+print("proxy url for pythonanywhere:", proxy_url)
 if proxy_url:
     transport = httpx.HTTPTransport(proxy=proxy_url, retries=3)
     http_client = httpx.Client(transport=transport, timeout=60.0)
 else:
     http_client = httpx.Client(timeout=60.0)
+
+# Setup Open AI and LangSmith tracing
 LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
 langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
 
-# Setup the FastAPI app by setting up temp dir & working files
+# Setup FastAPI app by setting up temp dir & working files
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Setup temp working directory on startup."""
@@ -89,7 +87,7 @@ async def lifespan(app: FastAPI):
     ## cleanup items here
     # none for now
 
-# setup routes and middleware
+# setup FastAPI app with CORS; mount oauth_router and static files
 app = FastAPI(debug=True, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
@@ -106,44 +104,57 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(oauth_router)  # Mount the /oauth2cb router
-
+# Mount the callback rounter /oauth2cb
+app.include_router(oauth_router)
 # Serve static files at /static
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# Splash page at site root
-# Diagnostic route to check outbound connectivity to OpenAI
-@app.get("/diag/openai")
-def diag_openai():
-    """Quick outbound check from the *web app process* (not the console)."""
-    results = {}
-    try:
-        # 1) Raw HTTPS GET without auth (should be 401)
-        r = httpx.get("https://api.openai.com/v1/models", timeout=10.0)
-        results["httpx_models_status"] = r.status_code
-        results["httpx_ok"] = (r.status_code in (200, 401))
-        results["httpx_body_snippet"] = r.text[:120]
-    except Exception as e:
-        results["httpx_exception"] = f"{type(e).__name__}: {e}"
 
-    try:
-        # 2) Minimal OpenAI SDK call
-        chat = LLM.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[{"role": "user", "content": "ping"}],
-            temperature=0,
-        )
-        results["openai_ok"] = True
-        results["openai_choice_present"] = bool(chat.choices and chat.choices[0].message.content)
-    except Exception as e:
-        results["openai_exception"] = f"{type(e).__name__}: {e}"
-
-    return results
+# # Diagnostic route to check outbound connectivity to OpenAI
+# @app.get("/diag/openai")
+# def diag_openai():
+#     """Quick outbound check from the *web app process* (not the console)."""
+#     results = {}
+#     try:
+#         # 1) Raw HTTPS GET without auth (should be 401)
+#         r = httpx.get("https://api.openai.com/v1/models", timeout=10.0)
+#         results["httpx_models_status"] = r.status_code
+#         results["httpx_ok"] = (r.status_code in (200, 401))
+#         results["httpx_body_snippet"] = r.text[:120]
+#     except Exception as e:
+#         results["httpx_exception"] = f"{type(e).__name__}: {e}"
+#
+#     try:
+#         # 2) Minimal OpenAI SDK call
+#         chat = LLM.chat.completions.create(
+#             model="gpt-5-mini",
+#             messages=[{"role": "user", "content": "ping"}],
+#             temperature=0,
+#         )
+#         results["openai_ok"] = True
+#         results["openai_choice_present"] = bool(chat.choices and chat.choices[0].message.content)
+#     except Exception as e:
+#         results["openai_exception"] = f"{type(e).__name__}: {e}"
+#
+#     return results
 
 @app.get("/", include_in_schema=False)
 def splash():
     """Serve the marketing splash page."""
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@traceable(name="prompt_LLM")
+def prompt_llm(prompt: str) -> str:
+    """Call OpenAI API to get a response."""
+    response = LLM.chat.completions.create(
+        model="gpt-5-mini",
+        temperature=1,
+        messages=[{"role": "user",
+                   "content": prompt}
+                  ]
+    )
+    return response.choices[0].message.content.strip()
 
 
 def create_review_prompt(job_description: str) -> str:
@@ -167,19 +178,6 @@ def create_review_prompt(job_description: str) -> str:
     prompt = prompt.replace("{{INPUT}}", input_json)
 
     return prompt
-
-
-@traceable(name="prompt_LLM")
-def prompt_llm(prompt: str) -> str:
-    """Call OpenAI API to get a response."""
-    response = LLM.chat.completions.create(
-        model="gpt-5-mini",
-        temperature=1,
-        messages=[{"role": "user",
-                   "content": prompt}
-                  ]
-    )
-    return response.choices[0].message.content.strip()
 
 
 def create_resume_diff(baseline:str, revised:str) -> str:
