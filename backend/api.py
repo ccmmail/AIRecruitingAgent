@@ -1,6 +1,6 @@
-"""APIs for generating a resume review and changes tailored to a given job description."""
+"""Backend APIs for generating a resume review and redlines against a job listing."""
 
-from fastapi import FastAPI, Security, HTTPException, status
+from fastapi import FastAPI, Security, HTTPException, status, Response
 from fastapi.responses import FileResponse
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
@@ -52,11 +52,12 @@ RESPONSE_REVIEW_DEMO_FILE = DEMO_DIR / "API_response_review_demo.json"
 print(f"{datetime.datetime.now()} starting up API server...")
 proxy_url = os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
 print("proxy url for pythonanywhere:", proxy_url)
+_timeout = httpx.Timeout(connect=10.0, read=180.0, write=30.0)
 if proxy_url:
-    transport = httpx.HTTPTransport(proxy=proxy_url, retries=3)
-    http_client = httpx.Client(transport=transport, timeout=60.0)
+    transport = httpx.HTTPTransport(proxy=proxy_url, retries=1)
+    http_client = httpx.Client(transport=transport, timeout=_timeout)
 else:
-    http_client = httpx.Client(timeout=60.0)
+    http_client = httpx.Client(timeout=_timeout)
 
 # Setup Open AI and LangSmith tracing
 LLM = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -64,7 +65,7 @@ os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
 langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
 
-# Setup FastAPI app by setting up temp dir & working files
+# Prepare temp and working files for FastAPI app
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Setup temp working directory on startup."""
@@ -242,14 +243,14 @@ def generate_review(job_listing: JobListing,
 
     # get the LLM response
     prompt = create_review_prompt(job_listing.job_description)
-    print("generate_review: calling OpenAI with prompt length", len(prompt))
+    print(f"{datetime.datetime.now()}: calling OpenAI with prompt length", len(prompt))
     try:
         llm_response_json = prompt_llm(prompt)
     except Exception as e:
         print("generate_review: OpenAI call failed:", type(e).__name__, str(e))
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Error calling LLM ({type(e).__name__}): {e}"
+            detail=f"generate_review: OpenAI call failed: ({type(e).__name__}): {e}"
         )
 
     # rotate the files to keep the last two LLM responses
@@ -331,5 +332,3 @@ def manage_resume(command: str, demo: bool = False,
     else:
         response = {"error": "Invalid command"}
     return response
-
-

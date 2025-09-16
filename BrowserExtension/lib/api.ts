@@ -459,7 +459,7 @@ export async function postReview({
       }),
     }, { auth: true, timeoutMs: 150000, parse: "json" }),
     {
-      retries: 1,
+      retries: 0,
       delayMs: 2000,
       shouldRetry: (e) => {
         const msg = String((e as Error)?.message || "");
@@ -483,7 +483,7 @@ export async function postQuestions({
       body: JSON.stringify({ qa_pairs, demo: !!demo }),
     }, { auth: true, timeoutMs: 150000, parse: "json" }),
     {
-      retries: 1,
+      retries: 0,
       delayMs: 2000,
       shouldRetry: (e) => {
         const msg = String((e as Error)?.message || "");
