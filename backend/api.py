@@ -1,6 +1,6 @@
 """APIs for generating a resume review and changes tailored to a given job description."""
 
-from fastapi import FastAPI, Security
+from fastapi import FastAPI, Security, HTTPException, status
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from starlette.staticfiles import StaticFiles
@@ -204,7 +204,13 @@ def generate_review(job_listing: JobListing,
 
     # get the LLM response
     prompt = create_review_prompt(job_listing.job_description)
-    llm_response_json = prompt_llm(prompt)
+    try:
+        llm_response_json = prompt_llm(prompt)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Error calling LLM: {e}"
+        )
 
     # rotate the files to keep the last two LLM responses
     if OUTPUT_FROM_LLM_CURRENT_FILE.exists():
