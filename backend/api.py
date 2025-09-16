@@ -54,6 +54,7 @@ print("Loaded OPENAI_API_KEY?", bool(os.getenv("OPENAI_API_KEY")))  # diagnostic
 print("openai version:", getattr(OpenAI, "__module__", "openai"))
 print("httpx version:", httpx.__version__)
 proxy_url = os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
+print("proxy url:", proxy_url)
 if proxy_url:
     transport = httpx.HTTPTransport(proxy=proxy_url, retries=3)
     http_client = httpx.Client(transport=transport, timeout=60.0)
