@@ -298,7 +298,7 @@ export async function login(): Promise<AuthToken | null> {
 
 // Optional non-extension fallback (web)
     if (typeof window !== "undefined") {
-        const fallbackRedirect = `${window.location.origin}/auth-callback.html`;
+        const fallbackRedirect = `${window.location.origin}/auth-callback`;
 
         // Generate and persist state + nonce for verification on return
         const state = rand();
