@@ -15,22 +15,26 @@ This is a brief note to clarify my mental model of how authentication and author
 
 4. Google gives me a web client ID (258289407737-mdh4gleu91oug8f5g8jqkt75f62te9kv.apps.googleusercontent.com). We hardcode the web client ID and bounce back URI into api.ts. This client ID is not a secret and is ok to be committed. 
 
+5. In manifest.json, we specify through "host_permissions" with domains the browserextension is allowed to access. 
+
 ## user auths in app
 
-5. When the user tries to login, the chrome extension starts OAuth. login() builds:
+6. When the user tries to login, the chrome extension starts OAuth. login() builds:
    - reponse_type=token id_token
    - scope=openid email profile
    - redirect_uri=https://airecruitingagent.pythonanywhere.com/oauth2cb
    - state (CSRF protection) and nonce (ID token replay protection)
 
-6. User goes through google's standard oauth flow to provide consent, after which Google redirects to my pythonanywhere URI. The bounce script reads the fragment and forwards the browser to https://<chrome-extension-id>.chromiumapp.org/<same fragment>>
+8. User goes through google's standard oauth flow to provide consent, after which Google redirects to my pythonanywhere URI. The bounce script reads the fragment and forwards the browser to https://<chrome-extension-id>.chromiumapp.org/<same fragment>>
 
-7. launchWebAuthFlow() in the chrome extension picks up the redirect, which contains the token in the URL fragment. I parse the access_token and id_token from the URL fragment, and save them in chrome's local storage. from the chrome extension perspective, we now have an authenticated user. 
+9. launchWebAuthFlow() in the chrome extension picks up the redirect, which contains the token in the URL fragment. I parse the access_token and id_token from the URL fragment, and save them in chrome's local storage. from the chrome extension perspective, we now have an authenticated user. 
 
 ## user accesses an authorization required feature, e.g., /review
 
-8. the extension sends Authorization: Bearer <ID_TOKEN>.
+10. If webapp, browser checks "is this cross-origin?" and whether the CORS policy allows it. If browserextension, this is disregarded.  
 
-8. on a per endpoint basis, the fastAPI app first uses verify_token(), which wraps Google’s verifier, to check signature (RS256), issuer, audience (aud == your Web client_id), expiry, and nonce. if it passes, the user is authenticated. 
+11. the extension sends Authorization: Bearer <ID_TOKEN>.
 
-10. the fastAPI app then check that the user is authorized through check_authorized_user(), which references ALLOWED_EMAILS and ALLOWED_domains to determine if the authenticated user is allowed. If not allowed, a 403 is returned.
+12. on a per endpoint basis, the fastAPI app first uses verify_token(), which wraps Google’s verifier, to check signature (RS256), issuer, audience (aud == your Web client_id), expiry, and nonce. if it passes, the user is authenticated. 
+
+13. the fastAPI app then check that the user is authorized through check_authorized_user(), which references ALLOWED_EMAILS and ALLOWED_domains to determine if the authenticated user is allowed. If not allowed, a 403 is returned.

@@ -1,0 +1,26 @@
+<!doctype html>
+<html><body>
+<script>
+  (function () {
+    // Parse the URL fragment returned by Google
+    const hash = location.hash.replace(/^#/, '');
+    const p = new URLSearchParams(hash);
+    const accessToken = p.get('access_token');
+    const idToken = p.get('id_token');
+    const expiresIn = parseInt(p.get('expires_in') || '0', 10);
+    if (!accessToken || !idToken || !expiresIn) {
+      document.body.textContent = 'Authentication failed.';
+      return;
+    }
+    const token = {
+      accessToken,
+      idToken,
+      expiresAt: Date.now() + (expiresIn * 1000)
+    };
+    // Matches TOKEN_STORAGE_KEY in api.ts
+    localStorage.setItem('ai_recruiting_agent_auth', JSON.stringify(token));
+    // Send the user back to the app
+    location.replace('/panel');
+  })();
+</script>
+</body></html>
