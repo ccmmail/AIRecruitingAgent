@@ -59,34 +59,6 @@ os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "AIRecruitingAgent"
 langsmith_client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
 
-# Diagnostic route to check outbound connectivity to OpenAI
-@app.get("/diag/openai")
-def diag_openai():
-    """Quick outbound check from the *web app process* (not the console)."""
-    results = {}
-    try:
-        # 1) Raw HTTPS GET without auth (should be 401)
-        r = httpx.get("https://api.openai.com/v1/models", timeout=10.0)
-        results["httpx_models_status"] = r.status_code
-        results["httpx_ok"] = (r.status_code in (200, 401))
-        results["httpx_body_snippet"] = r.text[:120]
-    except Exception as e:
-        results["httpx_exception"] = f"{type(e).__name__}: {e}"
-
-    try:
-        # 2) Minimal OpenAI SDK call
-        chat = LLM.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[{"role": "user", "content": "ping"}],
-            temperature=0,
-        )
-        results["openai_ok"] = True
-        results["openai_choice_present"] = bool(chat.choices and chat.choices[0].message.content)
-    except Exception as e:
-        results["openai_exception"] = f"{type(e).__name__}: {e}"
-
-    return results
-
 # Setup the FastAPI app by setting up temp dir & working files
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -133,6 +105,34 @@ app.include_router(oauth_router)  # Mount the /oauth2cb router
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Splash page at site root
+# Diagnostic route to check outbound connectivity to OpenAI
+@app.get("/diag/openai")
+def diag_openai():
+    """Quick outbound check from the *web app process* (not the console)."""
+    results = {}
+    try:
+        # 1) Raw HTTPS GET without auth (should be 401)
+        r = httpx.get("https://api.openai.com/v1/models", timeout=10.0)
+        results["httpx_models_status"] = r.status_code
+        results["httpx_ok"] = (r.status_code in (200, 401))
+        results["httpx_body_snippet"] = r.text[:120]
+    except Exception as e:
+        results["httpx_exception"] = f"{type(e).__name__}: {e}"
+
+    try:
+        # 2) Minimal OpenAI SDK call
+        chat = LLM.chat.completions.create(
+            model="gpt-5-mini",
+            messages=[{"role": "user", "content": "ping"}],
+            temperature=0,
+        )
+        results["openai_ok"] = True
+        results["openai_choice_present"] = bool(chat.choices and chat.choices[0].message.content)
+    except Exception as e:
+        results["openai_exception"] = f"{type(e).__name__}: {e}"
+
+    return results
+
 @app.get("/", include_in_schema=False)
 def splash():
     """Serve the marketing splash page."""
