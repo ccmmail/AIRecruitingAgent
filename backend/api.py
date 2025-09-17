@@ -52,7 +52,7 @@ RESPONSE_REVIEW_DEMO_FILE = DEMO_DIR / "API_response_review_demo.json"
 print(f"{datetime.datetime.now()} starting up API server...")
 proxy_url = os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
 print("proxy url for pythonanywhere:", proxy_url)
-_timeout = httpx.Timeout(connect=10.0, read=180.0, write=30.0, pool-60.0)
+_timeout = httpx.Timeout(connect=10.0, read=180.0, write=30.0, pool=60.0)
 if proxy_url:
     transport = httpx.HTTPTransport(proxy=proxy_url, retries=1)
     http_client = httpx.Client(transport=transport, timeout=_timeout)
